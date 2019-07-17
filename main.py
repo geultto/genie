@@ -1,10 +1,12 @@
 from slack_export import *
+import os
 
 if __name__ == "__main__":
     # TODO : 아래 요소들은 slack_export에 있던 것들인데 정리 필요
+    slack_token = os.getenv['SLACK_TOKEN']
     parser = argparse.ArgumentParser(description='Export Slack history')
 
-    parser.add_argument('--token', required=True, help="Slack API token")
+    parser.add_argument('--token', required=True, default=f"{slack_token}", help="Slack API token")
     parser.add_argument('--zip', help="Name of a zip file to outputs as")
 
     parser.add_argument(

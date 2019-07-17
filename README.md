@@ -30,6 +30,13 @@ source env/bin/activate
 pip3 install -r requirements.txt
 ```
 
+### Slack Token 환경 변수 지정
+- Terminal에서
+
+    ```
+    export SLACK_TOKEN='your_token'    
+    ```
+
 ### Run
 - To Be Update
 
