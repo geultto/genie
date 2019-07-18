@@ -1,5 +1,5 @@
 # Output Directory
-2019*/
+*-slack_export/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
