@@ -1,7 +1,3 @@
-# Output Directory / files
-*-slack_export/
-urlz.json
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
