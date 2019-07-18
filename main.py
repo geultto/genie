@@ -2,11 +2,12 @@ from slack_export import *
 import os
 
 if __name__ == "__main__":
-    # TODO : 아래 요소들은 slack_export에 있던 것들인데 정리 필요
-    slack_token = os.getenv['SLACK_TOKEN']
+
+    slack_token = os.getenv('SLACK_TOKEN')
+
     parser = argparse.ArgumentParser(description='Export Slack history')
 
-    parser.add_argument('--token', required=True, default=f"{slack_token}", help="Slack API token")
+    parser.add_argument('--token', default=slack_token, help="Slack API token")
     parser.add_argument('--zip', help="Name of a zip file to outputs as")
 
     parser.add_argument(
@@ -44,21 +45,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    users = []
-    channels = []
-    groups = []
-    dms = []
-    userNamesById = {}
-    userIdsByName = {}
-
     slack = Slacker(args.token)
-    testAuth = doTestAuth()
-    tokenOwnerId = testAuth['user_id']
 
-    bootstrapKeyValues()
+    testAuth = doTestAuth(slack)
+    tokenOwnerId = testAuth['user_id']
 
     dryRun = args.dryRun
     zipName = args.zip
+
+    users, channels, groups, dms = bootstrapKeyValues(dryRun)
 
     outputDirectory = "{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
 
@@ -66,26 +61,29 @@ if __name__ == "__main__":
     os.chdir(outputDirectory)
 
     if not dryRun:
-        dumpUserFile()
-        dumpChannelFile()
+        dumpUserFile(users)
+        dumpChannelFile(groups, dms, channels, tokenOwnerId)
 
     selectedChannels = selectConversations(
         channels,
         args.publicChannels,
         filterConversationsByName,
-        promptForPublicChannels)
+        promptForPublicChannels,
+        args)
 
     selectedGroups = selectConversations(
         groups,
         args.groups,
         filterConversationsByName,
-        promptForGroups)
+        promptForGroups,
+        args)
 
     selectedDms = selectConversations(
         dms,
         args.directMessages,
         filterDirectMessagesByUserNameOrId,
-        promptForDirectMessages)
+        promptForDirectMessages,
+        args)
 
     if len(selectedChannels) > 0:
         fetchPublicChannels(selectedChannels)
@@ -100,4 +98,4 @@ if __name__ == "__main__":
 
     print('\noutputs Directory: %s' % outputDirectory)
 
-    finalize()
+    finalize(zipName)
