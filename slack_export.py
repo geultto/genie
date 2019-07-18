@@ -16,12 +16,6 @@ from time import sleep
 # slack.groups
 # slack.im
 #
-
-userNamesById = {}
-userIdsByName = {}
-slack = None
-dryRun = None
-
 # channelId is the id of the channel/group/im you want to download history for.
 def getHistory(pageableObject, channelId, pageSize = 100):
     messages = []
@@ -121,7 +115,6 @@ def promptForPublicChannels(channels):
 
 # fetch and write history for all public channels
 def fetchPublicChannels(channels):
-    global dryRun, slack
     if dryRun:
         print("Public Channels selected for export:")
         for channel in channels:
@@ -138,7 +131,7 @@ def fetchPublicChannels(channels):
         parseMessages( channelDir, messages, 'channel')
 
 # write channels.json file
-def dumpChannelFile(groups, dms, channels, tokenOwnerId):
+def dumpChannelFile():
     print("Making channels file")
 
     private = []
@@ -149,7 +142,7 @@ def dumpChannelFile(groups, dms, channels, tokenOwnerId):
             mpim.append(group)
             continue
         private.append(group)
-
+    
     # slack viewer wants DMs to have a members list, not sure why but doing as they expect
     for dm in dms:
         dm['members'] = [dm['user'], tokenOwnerId]
@@ -165,12 +158,10 @@ def dumpChannelFile(groups, dms, channels, tokenOwnerId):
         json.dump( dms , outFile, indent=4)
 
 def filterDirectMessagesByUserNameOrId(dms, userNamesOrIds):
-    global userIdsByName
     userIds = [userIdsByName.get(userNameOrId, userNameOrId) for userNameOrId in userNamesOrIds]
     return [dm for dm in dms if dm['user'] in userIds]
 
 def promptForDirectMessages(dms):
-    global userNamesById
     dmNames = [userNamesById.get(dm['user'], dm['user'] + " (name unknown)") for dm in dms]
     selectedDms = pick(dmNames, 'Select the 1:1 DMs you want to export:', multi_select=True)
     return [dms[index] for dmName, index in selectedDms]
@@ -178,7 +169,6 @@ def promptForDirectMessages(dms):
 # fetch and write history for all direct message conversations
 # also known as IMs in the slack API.
 def fetchDirectMessages(dms):
-    global userNamesById, dryRun, slack
     if dryRun:
         print("1:1 DMs selected for export:")
         for dm in dms:
@@ -202,7 +192,6 @@ def promptForGroups(groups):
 # fetch and write history for specific private channel
 # also known as groups in the slack API.
 def fetchGroups(groups):
-    global dryRun, slack
     if dryRun:
         print("Private Channels and Group DMs selected for export:")
         for group in groups:
@@ -219,23 +208,20 @@ def fetchGroups(groups):
         parseMessages( groupDir, messages, 'group' )
 
 # fetch all users for the channel and return a map userId -> userName
-def getUserMap(users):
+def getUserMap():
     global userNamesById, userIdsByName
-
     for user in users:
         userNamesById[user['id']] = user['name']
         userIdsByName[user['name']] = user['id']
 
 # stores json of user info
-def dumpUserFile(users):
+def dumpUserFile():
     #write to user file, any existing file needs to be overwritten.
     with open( "users.json", 'w') as userFile:
         json.dump( users, userFile, indent=4 )
 
 # get basic info about the slack channel to ensure the authentication token works
-def doTestAuth(_slack):
-    global slack
-    slack = _slack
+def doTestAuth():
     testAuth = slack.auth.test().body
     teamName = testAuth['team']
     currentUser = testAuth['user']
@@ -243,13 +229,12 @@ def doTestAuth(_slack):
     return testAuth
 
 # Since Slacker does not Cache.. populate some reused lists
-def bootstrapKeyValues(_dryRun):
-    global slack, dryRun
-    dryRun = _dryRun
+def bootstrapKeyValues():
+    global users, channels, groups, dms
     users = slack.users.list().body['members']
     print("Found {0} Users".format(len(users)))
     sleep(1)
-
+    
     channels = slack.channels.list().body['channels']
     print("Found {0} Public Channels".format(len(channels)))
     sleep(1)
@@ -262,15 +247,14 @@ def bootstrapKeyValues(_dryRun):
     print("Found {0} 1:1 DM conversations\n".format(len(dms)))
     sleep(1)
 
-    getUserMap(users)
-
-    return users, channels, groups, dms
+    getUserMap()
 
 # Returns the conversations to download based on the command-line arguments
-def selectConversations(allConversations, commandLineArg, filter, prompt, args):
+def selectConversations(allConversations, commandLineArg, filter, prompt):
+    global args
     if isinstance(commandLineArg, list) and len(commandLineArg) > 0:
         return filter(allConversations, commandLineArg)
-    elif commandLineArg != None or not anyConversationsSpecified(args):
+    elif commandLineArg != None or not anyConversationsSpecified():
         if args.prompt:
             return prompt(allConversations)
         else:
@@ -279,7 +263,8 @@ def selectConversations(allConversations, commandLineArg, filter, prompt, args):
         return []
 
 # Returns true if any conversations were specified on the command line
-def anyConversationsSpecified(args):
+def anyConversationsSpecified():
+    global args
     return args.publicChannels != None or args.groups != None or args.directMessages != None
 
 # This method is used in order to create a empty Channel if you do not export public channels
@@ -291,8 +276,108 @@ def dumpDummyChannel():
     outFileName = '{room}/{file}.json'.format( room = channelName, file = fileDate )
     writeMessageFile(outFileName, [])
 
-def finalize(zipName):
+def finalize():
     os.chdir('..')
     if zipName:
         shutil.make_archive(zipName, 'zip', outputDirectory, None)
         shutil.rmtree(outputDirectory)
+    # exit()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Export Slack history')
+
+    parser.add_argument('--token', required=True, help="Slack API token")
+    parser.add_argument('--zip', help="Name of a zip file to outputs as")
+
+    parser.add_argument(
+        '--dryRun',
+        action='store_true',
+        default=False,
+        help="List the conversations that will be exported (don't fetch/write history)")
+
+    parser.add_argument(
+        '--publicChannels',
+        nargs='*',
+        default=None,
+        metavar='CHANNEL_NAME',
+        help="Export the given Public Channels")
+
+    parser.add_argument(
+        '--groups',
+        nargs='*',
+        default=None,
+        metavar='GROUP_NAME',
+        help="Export the given Private Channels / Group DMs")
+
+    parser.add_argument(
+        '--directMessages',
+        nargs='*',
+        default=None,
+        metavar='USER_NAME',
+        help="Export 1:1 DMs with the given users")
+
+    parser.add_argument(
+        '--prompt',
+        action='store_true',
+        default=False,
+        help="Prompt you to select the conversations to export")
+
+    args = parser.parse_args()
+
+    users = []    
+    channels = []
+    groups = []
+    dms = []
+    userNamesById = {}
+    userIdsByName = {}
+
+    slack = Slacker(args.token)
+    testAuth = doTestAuth()
+    tokenOwnerId = testAuth['user_id']
+
+    bootstrapKeyValues()
+
+    dryRun = args.dryRun
+    zipName = args.zip
+
+    outputDirectory = "{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
+   
+    mkdir(outputDirectory)
+    os.chdir(outputDirectory)
+
+    if not dryRun:
+        dumpUserFile()
+        dumpChannelFile()
+
+    selectedChannels = selectConversations(
+        channels,
+        args.publicChannels,
+        filterConversationsByName,
+        promptForPublicChannels)
+
+    selectedGroups = selectConversations(
+        groups,
+        args.groups,
+        filterConversationsByName,
+        promptForGroups)
+
+    selectedDms = selectConversations(
+        dms,
+        args.directMessages,
+        filterDirectMessagesByUserNameOrId,
+        promptForDirectMessages)
+
+    if len(selectedChannels) > 0:
+        fetchPublicChannels(selectedChannels)
+
+    if len(selectedGroups) > 0:
+        if len(selectedChannels) == 0:
+            dumpDummyChannel()
+        fetchGroups(selectedGroups)
+
+    if len(selectedDms) > 0:
+        fetchDirectMessages(selectedDms)
+
+    print('\noutputs Directory: %s' % outputDirectory)
+    
+    finalize()
