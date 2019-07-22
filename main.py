@@ -1,9 +1,12 @@
 from slack_export import *
-import os, json
+import os, json, csv
+import pandas as pd
+import yaml
+
 
 if __name__ == "__main__":
 
-    # save raw data from slack
+    ## ---------------------------- save raw data from slack ---------------------------- ##
     # It will generate data files in output Directory
     slack_token = os.getenv('SLACK_TOKEN')
 
@@ -82,6 +85,7 @@ if __name__ == "__main__":
     finalize(zipName)
 
 
+    ## ---------------------------- Get users url data by reactions ---------------------------- ##
     # Get user data
     users = {}
     with open(os.path.join(outputDirectory, 'users.json')) as json_file:
@@ -96,9 +100,9 @@ if __name__ == "__main__":
     # Get Filtered URLs from saved data
     # need dataz only from [3_*] channels
     all_channels = os.listdir(outputDirectory)
-    filtered_channels = sorted([i for i in all_channels if i.startswith('3_')])
+    filtered_channels = sorted([i for i in all_channels if i.startswith(args.channel_prefix)])
 
-    # get all data from filtered channels
+    # collect all data from filtered channels
     all_messages = []
     for channel in filtered_channels:
         channel_path = os.path.join(outputDirectory, channel)
@@ -107,22 +111,40 @@ if __name__ == "__main__":
                 json_data = json.load(json_file)
                 all_messages.extend(json_data)
 
+    def self_reaction_check(check_reaction, message):
+        '''
+        메세지에 self로 check_reaction을 입력했는지 확인
+        '''
+        reactions = message['reactions']
+        userId = message['user']
+        for reaction in reactions:
+            if reaction['name'] == check_reaction:
+                if userId in reaction['users']:
+                    return True
+                else:
+                    return False
+            else:
+                return False
+
     # filter data with reactions
-    # '+1' reaction으로 filtering
-    filter_reaction = '+1'
-    urlz = []
+    submit_reaction = 'submit'
+    pass_reaction = 'pass'
+    pass_users = []
+    submit_urlz = []
     for message in all_messages:
+        # 1) submit
         if ('attachments' in message.keys()) and ('reactions' in message.keys()):
-            reactions = [reaction['name'] for reaction in message['reactions']]
-            if filter_reaction in reactions:
+            if self_reaction_check(submit_reaction, message):
                 userId = message['user']
-                title = message['attachments'][0]['title']
                 link = message['attachments'][0]['title_link']
                 time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
 
-                url_data = {'userId': userId, 'userName': users[userId], 'title': title, 'url': link, 'time': time}
-                urlz.append(url_data)
+                url_data = {'userId': userId, 'url': link, 'time': time}
+                submit_urlz.append(url_data)
 
-    # save as json file
-    with open('output.json', 'w') as json_file:
-        json.dump(urlz, json_file, indent=4)
+        # 2) pass
+        if ('reactions' in message.keys()) and (self_reaction_check(pass_reaction, message)):
+            userId = message['user']
+            time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
+            pass_user_data = {'userId': userId, 'time': time}
+            pass_users.append(pass_user_data)
