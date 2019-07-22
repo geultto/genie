@@ -1,7 +1,8 @@
 from slack_export import *
 import os, json, csv
 import pandas as pd
-import yaml
+from utils import bigquery_config
+from datetime import timedelta
 
 
 if __name__ == "__main__":
@@ -15,6 +16,8 @@ if __name__ == "__main__":
     parser.add_argument('--token', default=slack_token, help="Slack API token")
     parser.add_argument('--zip', help="Name of a zip file to outputs as")
     parser.add_argument('--channel_prefix', default=None, required=True, help="prefix of channel which need to be exported")
+    parser.add_argument('--gbq_phase', default=None, required=True, help='BigQuery dealing phase: development / production')
+    parser.add_argument('--deadline', default=None, required=True, help='deadline date (sunday): year-month-date')
 
     parser.add_argument(
         '--dryRun',
@@ -59,7 +62,7 @@ if __name__ == "__main__":
     dryRun = args.dryRun
     zipName = args.zip
 
-    users, channels, groups, dms = bootstrapKeyValues(dryRun)
+    users, channels = bootstrapKeyValues(dryRun)
 
     outputDirectory = "{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
 
@@ -68,7 +71,7 @@ if __name__ == "__main__":
 
     if not dryRun:
         dumpUserFile(users)
-        dumpChannelFile(groups, dms, channels, tokenOwnerId)
+        dumpChannelFile(channels)
 
     selectedChannels = selectConversations(
         channels,
@@ -80,7 +83,7 @@ if __name__ == "__main__":
     if len(selectedChannels) > 0:
         fetchPublicChannels(selectedChannels, args.channel_prefix)
 
-    print('\noutputs Directory: %s' % outputDirectory)
+    print('\nAll message data saved.\noutputs Directory: [%s]\n' % outputDirectory)
 
     finalize(zipName)
 
@@ -126,11 +129,30 @@ if __name__ == "__main__":
             else:
                 return False
 
+    # deadline date check
+    def check_deadline(deadline_str, time_str, d_type):
+        '''
+        string type로 입력된 deadline date (ex. 2019-07-22) 에 따라
+        submit_deadline(월요일 새벽 두시), pass_deadline(일요일 자정)으로
+        유효성 check
+        '''
+        deadline_time = datetime.strptime(deadline_str, '%Y-%m-%d')
+        pass_deadline = deadline_time
+        submit_deadline = deadline_time + timedelta(hours=2)
+
+        time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+
+        if d_type == 'submit':
+            return time < submit_deadline
+        elif d_type == 'pass':
+            return time < pass_deadline
+
+
     # filter data with reactions
     submit_reaction = 'submit'
     pass_reaction = 'pass'
-    pass_users = []
-    submit_urlz = []
+    submit_data = pd.DataFrame({'userId': userid, 'url': -1, 'time': None, 'deadline_check': None} \
+                               for userid in users)
     for message in all_messages:
         # 1) submit
         if ('attachments' in message.keys()) and ('reactions' in message.keys()):
@@ -138,13 +160,45 @@ if __name__ == "__main__":
                 userId = message['user']
                 link = message['attachments'][0]['title_link']
                 time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
+                isindeadline = check_deadline(args.deadline, time, submit_reaction)
 
-                url_data = {'userId': userId, 'url': link, 'time': time}
-                submit_urlz.append(url_data)
+                if isindeadline:
+                    submit_data.loc[submit_data['userId'] == userId, 'url'] = link
+                else:
+                    submit_data.loc[submit_data['userId'] == userId, 'url'] = -1
+                submit_data.loc[submit_data['userId'] == userId, 'time'] = time
+                submit_data.loc[submit_data['userId'] == userId, 'deadline_check'] = isindeadline
 
         # 2) pass
         if ('reactions' in message.keys()) and (self_reaction_check(pass_reaction, message)):
             userId = message['user']
             time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
-            pass_user_data = {'userId': userId, 'time': time}
-            pass_users.append(pass_user_data)
+            isindeadline = check_deadline(args.deadline, time, pass_reaction)
+
+            if isindeadline:
+                submit_data.loc[submit_data['userId'] == userId, 'url'] = 'pass'
+            else:
+                submit_data.loc[submit_data['userId'] == userId, 'url'] = -1
+            submit_data.loc[submit_data['userId'] == userId, 'time'] = time
+            submit_data.loc[submit_data['userId'] == userId, 'deadline_check'] = isindeadline
+
+
+    ## -------------------- save data as pandas DataFrame & send to BigQuery -------------------- ##
+    print('Sending Data to BigQuery...')
+    phase = args.gbq_phase
+    project_id = bigquery_config[phase]['project']            # geultto
+    table_suffix = bigquery_config[phase]['suffix']           # prod / staging
+    log_table_id = 'slack_log.3rd_{}'.format(table_suffix)
+    status_table_id = 'status_board.3rd_{}'.format(table_suffix)
+
+    submit_data.to_gbq(log_table_id, project_id=project_id, if_exists='replace')
+
+    query = '''
+    select url, name
+    from `geultto.slack_log.3rd_staging` as l left outer join `geultto.user_db.team_member` as r
+    on l.userId = r.id
+    '''
+    status_table = pd.read_gbq(query, project_id=project_id, dialect='standard')
+    status_table.to_gbq(status_table_id, project_id=project_id, if_exists='replace')
+
+    print('Succesfully sended.')

@@ -139,17 +139,8 @@ def fetchPublicChannels(channels, channel_prefix):
             parseMessages( channelDir, messages, 'channel')
 
 # write channels.json file
-def dumpChannelFile(groups, dms, channels, tokenOwnerId):
-    print("Making channels file")
-
-    private = []
-    mpim = []
-
-    for group in groups:
-        if group['is_mpim']:
-            mpim.append(group)
-            continue
-        private.append(group)
+def dumpChannelFile(channels):
+    print("\nMaking channels file")
 
     #We will be overwriting this file on each run.
     with open('channels.json', 'w') as outFile:
@@ -230,7 +221,7 @@ def doTestAuth(_slack):
     testAuth = slack.auth.test().body
     teamName = testAuth['team']
     currentUser = testAuth['user']
-    print("Successfully authenticated for team {0} and user {1} ".format(teamName, currentUser))
+    print("\nSuccessfully authenticated for team {0} and user {1} ".format(teamName, currentUser))
     return testAuth
 
 # Since Slacker does not Cache.. populate some reused lists
@@ -245,17 +236,9 @@ def bootstrapKeyValues(_dryRun):
     print("Found {0} Public Channels".format(len(channels)))
     sleep(1)
 
-    groups = slack.groups.list().body['groups']
-    print("Found {0} Private Channels or Group DMs".format(len(groups)))
-    sleep(1)
-
-    dms = slack.im.list().body['ims']
-    print("Found {0} 1:1 DM conversations\n".format(len(dms)))
-    sleep(1)
-
     getUserMap(users)
 
-    return users, channels, groups, dms
+    return users, channels
 
 # Returns the conversations to download based on the command-line arguments
 def selectConversations(allConversations, commandLineArg, filter, prompt, args):
