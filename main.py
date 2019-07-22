@@ -11,6 +11,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--token', default=slack_token, help="Slack API token")
     parser.add_argument('--zip', help="Name of a zip file to outputs as")
+    parser.add_argument('--channel_prefix', default=None, required=True, help="prefix of channel which need to be exported")
 
     parser.add_argument(
         '--dryRun',
@@ -73,30 +74,8 @@ if __name__ == "__main__":
         promptForPublicChannels,
         args)
 
-    selectedGroups = selectConversations(
-        groups,
-        args.groups,
-        filterConversationsByName,
-        promptForGroups,
-        args)
-
-    selectedDms = selectConversations(
-        dms,
-        args.directMessages,
-        filterDirectMessagesByUserNameOrId,
-        promptForDirectMessages,
-        args)
-
     if len(selectedChannels) > 0:
-        fetchPublicChannels(selectedChannels)
-
-    if len(selectedGroups) > 0:
-        if len(selectedChannels) == 0:
-            dumpDummyChannel()
-        fetchGroups(selectedGroups)
-
-    if len(selectedDms) > 0:
-        fetchDirectMessages(selectedDms)
+        fetchPublicChannels(selectedChannels, args.channel_prefix)
 
     print('\noutputs Directory: %s' % outputDirectory)
 
@@ -145,5 +124,5 @@ if __name__ == "__main__":
                 urlz.append(url_data)
 
     # save as json file
-    with open('urlz.json', 'w') as json_file:
+    with open('output.json', 'w') as json_file:
         json.dump(urlz, json_file, indent=4)

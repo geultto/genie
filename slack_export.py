@@ -120,7 +120,7 @@ def promptForPublicChannels(channels):
     return [channels[index] for channelName, index in selectedChannels]
 
 # fetch and write history for all public channels
-def fetchPublicChannels(channels):
+def fetchPublicChannels(channels, channel_prefix):
     global dryRun, slack
     if dryRun:
         print("Public Channels selected for export:")
@@ -131,11 +131,12 @@ def fetchPublicChannels(channels):
 
     for channel in channels:
         channelDir = channel['name']
-        print("Fetching history for Public Channel: {0}".format(channelDir))
-        channelDir = channel['name']
-        mkdir( channelDir )
-        messages = getHistory(slack.channels, channel['id'])
-        parseMessages( channelDir, messages, 'channel')
+        if channelDir.startswith(channel_prefix):
+            print("Fetching history for Public Channel: {0}".format(channelDir))
+            channelDir = channel['name']
+            mkdir( channelDir )
+            messages = getHistory(slack.channels, channel['id'])
+            parseMessages( channelDir, messages, 'channel')
 
 # write channels.json file
 def dumpChannelFile(groups, dms, channels, tokenOwnerId):
@@ -150,19 +151,9 @@ def dumpChannelFile(groups, dms, channels, tokenOwnerId):
             continue
         private.append(group)
 
-    # slack viewer wants DMs to have a members list, not sure why but doing as they expect
-    for dm in dms:
-        dm['members'] = [dm['user'], tokenOwnerId]
-
     #We will be overwriting this file on each run.
     with open('channels.json', 'w') as outFile:
         json.dump( channels , outFile, indent=4)
-    with open('groups.json', 'w') as outFile:
-        json.dump( private , outFile, indent=4)
-    with open('mpims.json', 'w') as outFile:
-        json.dump( mpim , outFile, indent=4)
-    with open('dms.json', 'w') as outFile:
-        json.dump( dms , outFile, indent=4)
 
 def filterDirectMessagesByUserNameOrId(dms, userNamesOrIds):
     global userIdsByName
