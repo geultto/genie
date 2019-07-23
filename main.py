@@ -1,5 +1,5 @@
 from slack_export import *
-import os, json, csv
+import os, json, csv, re
 import pandas as pd
 from utils import bigquery_config
 from datetime import timedelta
@@ -124,10 +124,7 @@ if __name__ == "__main__":
             if reaction['name'] == check_reaction:
                 if userId in reaction['users']:
                     return True
-                else:
-                    return False
-            else:
-                return False
+        return False
 
     # deadline date check
     def check_deadline(deadline_str, time_str, d_type):
@@ -137,7 +134,9 @@ if __name__ == "__main__":
         유효성 check
         '''
         deadline_time = datetime.strptime(deadline_str, '%Y-%m-%d')
+        # sunday 12am
         pass_deadline = deadline_time
+        # monday 2am
         submit_deadline = deadline_time + timedelta(hours=2)
 
         time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
@@ -151,14 +150,23 @@ if __name__ == "__main__":
     # filter data with reactions
     submit_reaction = 'submit'
     pass_reaction = 'pass'
-    submit_data = pd.DataFrame({'userId': userid, 'url': -1, 'time': None, 'deadline_check': None} \
+    submit_data = pd.DataFrame({'userId': userid, 'url': -1, 'time': -1, 'deadline_check': None, 'message_id': None} \
                                for userid in users)
     for message in all_messages:
         # 1) submit
-        if ('attachments' in message.keys()) and ('reactions' in message.keys()):
+        if (('attachments' in message.keys()) or ('<https://' in message['text'])) and ('reactions' in message.keys()):
             if self_reaction_check(submit_reaction, message):
                 userId = message['user']
-                link = message['attachments'][0]['title_link']
+                if 'attachments' in message.keys():
+                    link = message['attachments'][0]['title_link']
+                # naver blog의 경우 attachments로 생성 안되어 regex로 잡기
+                elif ('<https://' in message['text']):
+                    message_text = message['text']
+                    pattern = re.compile('<https://.+?>')
+                    link = pattern.search(message_text)
+                    link = link.group()[1:-1]
+
+                message_id = message['client_msg_id']
                 time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
                 isindeadline = check_deadline(args.deadline, time, submit_reaction)
 
@@ -168,6 +176,7 @@ if __name__ == "__main__":
                     submit_data.loc[submit_data['userId'] == userId, 'url'] = -1
                 submit_data.loc[submit_data['userId'] == userId, 'time'] = time
                 submit_data.loc[submit_data['userId'] == userId, 'deadline_check'] = isindeadline
+                submit_data.loc[submit_data['userId'] == userId, 'message_id'] = message_id
 
         # 2) pass
         if ('reactions' in message.keys()) and (self_reaction_check(pass_reaction, message)):
@@ -181,7 +190,7 @@ if __name__ == "__main__":
                 submit_data.loc[submit_data['userId'] == userId, 'url'] = -1
             submit_data.loc[submit_data['userId'] == userId, 'time'] = time
             submit_data.loc[submit_data['userId'] == userId, 'deadline_check'] = isindeadline
-
+            submit_data.loc[submit_data['userId'] == userId, 'message_id'] = message_id
 
     ## -------------------- save data as pandas DataFrame & send to BigQuery -------------------- ##
     print('Sending Data to BigQuery...')
@@ -194,9 +203,10 @@ if __name__ == "__main__":
     submit_data.to_gbq(log_table_id, project_id=project_id, if_exists='replace')
 
     query = '''
-    select url, name
+    select name, team, time, url
     from `geultto.slack_log.3rd_staging` as l left outer join `geultto.user_db.team_member` as r
     on l.userId = r.id
+    where name IS NOT NULL
     '''
     status_table = pd.read_gbq(query, project_id=project_id, dialect='standard')
     status_table.to_gbq(status_table_id, project_id=project_id, if_exists='replace')
