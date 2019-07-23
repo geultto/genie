@@ -1,7 +1,7 @@
 from slack_export import *
 import os, json, csv, re
 import pandas as pd
-from utils import bigquery_config
+from utils import bigquery_config, root_path
 from datetime import timedelta
 
 
@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
     users, channels = bootstrapKeyValues(dryRun)
 
-    outputDirectory = "{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
+    outputDirectory = "outputs/{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
 
     mkdir(outputDirectory)
     os.chdir(outputDirectory)
@@ -88,10 +88,27 @@ if __name__ == "__main__":
     finalize(zipName)
 
 
+    ## ---------------------------- Parameters for BigQuery ---------------------------- ##
+    phase = args.gbq_phase
+    project_id = bigquery_config[phase]['project']            # geultto
+    table_suffix = bigquery_config[phase]['suffix']           # prod / staging
+    log_table_id = 'slack_log.3rd_{}'.format(table_suffix)
+    status_table_id = 'status_board.3rd_{}'.format(table_suffix)
+
+    # feedback 위해 글또 3기의 제출 마감 날짜 목록 추출
+    query_get_dates = '''
+    select date
+    from `geultto.peer_reviewer.3rd_prod`
+    group by date
+    '''
+    all_deadline_dates = pd.read_gbq(query_get_dates, project_id=project_id, dialect='standard')
+
+
     ## ---------------------------- Get users url data by reactions ---------------------------- ##
     # Get user data
     users = {}
-    with open(os.path.join(outputDirectory, 'users.json')) as json_file:
+    abs_outputDirectory = os.path.join(root_path, outputDirectory)
+    with open(os.path.join(abs_outputDirectory, 'users.json')) as json_file:
         user_json = json.load(json_file)
         for user in user_json:
             if not (user['is_bot'] or (user['name'] == 'slackbot')):
@@ -102,13 +119,13 @@ if __name__ == "__main__":
 
     # Get Filtered URLs from saved data
     # need dataz only from [3_*] channels
-    all_channels = os.listdir(outputDirectory)
+    all_channels = os.listdir(abs_outputDirectory)
     filtered_channels = sorted([i for i in all_channels if i.startswith(args.channel_prefix)])
 
     # collect all data from filtered channels
     all_messages = []
     for channel in filtered_channels:
-        channel_path = os.path.join(outputDirectory, channel)
+        channel_path = os.path.join(abs_outputDirectory, channel)
         for date in sorted(os.listdir(channel_path)):
             with open(os.path.join(channel_path, date)) as json_file:
                 json_data = json.load(json_file)
@@ -192,23 +209,22 @@ if __name__ == "__main__":
             submit_data.loc[submit_data['userId'] == userId, 'deadline_check'] = isindeadline
             submit_data.loc[submit_data['userId'] == userId, 'message_id'] = message_id
 
+    with open(os.path.join(root_path, 'outputs/all_messages.json'), 'w') as outFile:
+        json.dump( all_messages , outFile, indent=4)
+
     ## -------------------- save data as pandas DataFrame & send to BigQuery -------------------- ##
     print('Sending Data to BigQuery...')
-    phase = args.gbq_phase
-    project_id = bigquery_config[phase]['project']            # geultto
-    table_suffix = bigquery_config[phase]['suffix']           # prod / staging
-    log_table_id = 'slack_log.3rd_{}'.format(table_suffix)
-    status_table_id = 'status_board.3rd_{}'.format(table_suffix)
 
     submit_data.to_gbq(log_table_id, project_id=project_id, if_exists='replace')
 
-    query = '''
+    # status_table에 원하는 데이터만 추출해서 생성
+    query_status_table = '''
     select name, team, time, url
     from `geultto.slack_log.3rd_staging` as l left outer join `geultto.user_db.team_member` as r
     on l.userId = r.id
     where name IS NOT NULL
     '''
-    status_table = pd.read_gbq(query, project_id=project_id, dialect='standard')
+    status_table = pd.read_gbq(query_status_table, project_id=project_id, dialect='standard')
     status_table.to_gbq(status_table_id, project_id=project_id, if_exists='replace')
 
     print('Succesfully sended.')
