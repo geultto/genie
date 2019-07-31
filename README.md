@@ -38,7 +38,17 @@ pip3 install -r requirements.txt
     ```
 
 ### Run
-- To Be Update
+#### \# `main.py` 실행
+
+```
+python main.py --channel_prefix 3_
+               --gbq_phase development
+               --deadline 2019-07-22
+```
+  - `channel_prefix` : 추출하기 원하는 채널의 접두사 (ex. '1_', '2_' 등)
+  - `gbq_phase` : 실행시키는 용도 ('development' 또는 'production'으로 입력)
+  - `deadline` : 현재 제출의 마감 기한 (year-month-day 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)
+
 
 ### Crontab
 - To Be Update

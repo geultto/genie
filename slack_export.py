@@ -120,7 +120,7 @@ def promptForPublicChannels(channels):
     return [channels[index] for channelName, index in selectedChannels]
 
 # fetch and write history for all public channels
-def fetchPublicChannels(channels):
+def fetchPublicChannels(channels, channel_prefix):
     global dryRun, slack
     if dryRun:
         print("Public Channels selected for export:")
@@ -131,38 +131,20 @@ def fetchPublicChannels(channels):
 
     for channel in channels:
         channelDir = channel['name']
-        print("Fetching history for Public Channel: {0}".format(channelDir))
-        channelDir = channel['name']
-        mkdir( channelDir )
-        messages = getHistory(slack.channels, channel['id'])
-        parseMessages( channelDir, messages, 'channel')
+        if channelDir.startswith(channel_prefix):
+            print("Fetching history for Public Channel: {0}".format(channelDir))
+            channelDir = channel['name']
+            mkdir( channelDir )
+            messages = getHistory(slack.channels, channel['id'])
+            parseMessages( channelDir, messages, 'channel')
 
 # write channels.json file
-def dumpChannelFile(groups, dms, channels, tokenOwnerId):
-    print("Making channels file")
-
-    private = []
-    mpim = []
-
-    for group in groups:
-        if group['is_mpim']:
-            mpim.append(group)
-            continue
-        private.append(group)
-
-    # slack viewer wants DMs to have a members list, not sure why but doing as they expect
-    for dm in dms:
-        dm['members'] = [dm['user'], tokenOwnerId]
+def dumpChannelFile(channels):
+    print("\nMaking channels file")
 
     #We will be overwriting this file on each run.
     with open('channels.json', 'w') as outFile:
         json.dump( channels , outFile, indent=4)
-    with open('groups.json', 'w') as outFile:
-        json.dump( private , outFile, indent=4)
-    with open('mpims.json', 'w') as outFile:
-        json.dump( mpim , outFile, indent=4)
-    with open('dms.json', 'w') as outFile:
-        json.dump( dms , outFile, indent=4)
 
 def filterDirectMessagesByUserNameOrId(dms, userNamesOrIds):
     global userIdsByName
@@ -239,7 +221,7 @@ def doTestAuth(_slack):
     testAuth = slack.auth.test().body
     teamName = testAuth['team']
     currentUser = testAuth['user']
-    print("Successfully authenticated for team {0} and user {1} ".format(teamName, currentUser))
+    print("\nSuccessfully authenticated for team {0} and user {1} ".format(teamName, currentUser))
     return testAuth
 
 # Since Slacker does not Cache.. populate some reused lists
@@ -254,17 +236,9 @@ def bootstrapKeyValues(_dryRun):
     print("Found {0} Public Channels".format(len(channels)))
     sleep(1)
 
-    groups = slack.groups.list().body['groups']
-    print("Found {0} Private Channels or Group DMs".format(len(groups)))
-    sleep(1)
-
-    dms = slack.im.list().body['ims']
-    print("Found {0} 1:1 DM conversations\n".format(len(dms)))
-    sleep(1)
-
     getUserMap(users)
 
-    return users, channels, groups, dms
+    return users, channels
 
 # Returns the conversations to download based on the command-line arguments
 def selectConversations(allConversations, commandLineArg, filter, prompt, args):
