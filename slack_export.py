@@ -254,7 +254,7 @@ def selectConversations(allConversations, commandLineArg, filter, prompt, args):
 
 # Returns true if any conversations were specified on the command line
 def anyConversationsSpecified(args):
-    return args.publicChannels != None or args.groups != None or args.directMessages != None
+    return args.public_channels != None
 
 # This method is used in order to create a empty Channel if you do not export public channels
 # otherwise, the viewer will error and not show the root screen. Rather than forking the editor, I work with it.
