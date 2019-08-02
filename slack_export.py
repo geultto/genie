@@ -262,11 +262,11 @@ def dumpDummyChannel():
     channelName = channels[0]['name']
     mkdir( channelName )
     fileDate = '{:%Y-%m-%d}'.format(datetime.today())
-    outFileName = '{room}/{file}.json'.format( room = channelName, file = fileDate )
+    outFileName = '{room}/{file}.json'.format(room=channelName, file=fileDate )
     writeMessageFile(outFileName, [])
 
 def finalize(zipName):
     os.chdir('..')
     if zipName:
-        shutil.make_archive(zipName, 'zip', outputDirectory, None)
-        shutil.rmtree(outputDirectory)
+        shutil.make_archive(zipName, 'zip', output_directory, None)
+        shutil.rmtree(output_directory)

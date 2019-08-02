@@ -1,50 +1,34 @@
 from slack_export import *
-import os, json, csv, re
+import os, json, re
 import pandas as pd
 from utils import bigquery_config, root_path
-from datetime import timedelta
-
+from checker import self_reaction_check, check_deadline
+from extract_data import get_status_data, get_deadline_data
 
 if __name__ == "__main__":
-
     ## ---------------------------- save raw data from slack ---------------------------- ##
     # It will generate data files in output Directory
     slack_token = os.getenv('SLACK_TOKEN')
-
     parser = argparse.ArgumentParser(description='Export Slack history')
 
     parser.add_argument('--token', default=slack_token, help="Slack API token")
     parser.add_argument('--zip', help="Name of a zip file to outputs as")
-    parser.add_argument('--channel_prefix', default=None, required=True, help="prefix of channel which need to be exported")
-    parser.add_argument('--gbq_phase', default=None, required=True, help='BigQuery dealing phase: development / production')
-    parser.add_argument('--deadline', default=None, required=True, help='deadline date (sunday): year-month-date')
+    parser.add_argument('--channel_prefix', default='3_', help="prefix of channel which need to be exported")
+    parser.add_argument('--gbq_phase', default='development', help='BigQuery dealing phase: development / production')
+    parser.add_argument('--deadline', default='2019-07-22', help='deadline date (sunday): year-month-date')
 
     parser.add_argument(
-        '--dryRun',
+        '--dry_run',
         action='store_true',
         default=False,
         help="List the conversations that will be exported (don't fetch/write history)")
 
     parser.add_argument(
-        '--publicChannels',
+        '--public_channels',
         nargs='*',
         default=None,
         metavar='CHANNEL_NAME',
         help="Export the given Public Channels")
-
-    parser.add_argument(
-        '--groups',
-        nargs='*',
-        default=None,
-        metavar='GROUP_NAME',
-        help="Export the given Private Channels / Group DMs")
-
-    parser.add_argument(
-        '--directMessages',
-        nargs='*',
-        default=None,
-        metavar='USER_NAME',
-        help="Export 1:1 DMs with the given users")
 
     parser.add_argument(
         '--prompt',
@@ -53,39 +37,33 @@ if __name__ == "__main__":
         help="Prompt you to select the conversations to export")
 
     args = parser.parse_args()
-
     slack = Slacker(args.token)
+    dry_run = args.dry_run
+    zip_name = args.zip
+    users, channels = bootstrapKeyValues(dry_run)
 
-    testAuth = doTestAuth(slack)
-    tokenOwnerId = testAuth['user_id']
+    output_directory = "outputs/{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
 
-    dryRun = args.dryRun
-    zipName = args.zip
+    mkdir(output_directory)
+    os.chdir(output_directory)
 
-    users, channels = bootstrapKeyValues(dryRun)
-
-    outputDirectory = "outputs/{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
-
-    mkdir(outputDirectory)
-    os.chdir(outputDirectory)
-
-    if not dryRun:
+    if not dry_run:
         dumpUserFile(users)
         dumpChannelFile(channels)
 
-    selectedChannels = selectConversations(
+    selected_channels = selectConversations(
         channels,
-        args.publicChannels,
+        args.public_channels,
         filterConversationsByName,
         promptForPublicChannels,
         args)
 
-    if len(selectedChannels) > 0:
-        fetchPublicChannels(selectedChannels, args.channel_prefix)
+    if len(selected_channels) > 0:
+        fetchPublicChannels(selected_channels, args.channel_prefix)
 
-    print('\nAll message data saved.\noutputs Directory: [%s]\n' % outputDirectory)
+    print('\nAll message data saved.\noutputs Directory: [%s]\n' % output_directory)
 
-    finalize(zipName)
+    finalize(zip_name)
 
 
     ## ---------------------------- Parameters for BigQuery ---------------------------- ##
@@ -95,20 +73,13 @@ if __name__ == "__main__":
     log_table_id = 'slack_log.3rd_{}'.format(table_suffix)
     status_table_id = 'status_board.3rd_{}'.format(table_suffix)
 
-    # feedback 위해 글또 3기의 제출 마감 날짜 목록 추출
-    query_get_dates = '''
-    select date
-    from `geultto.peer_reviewer.3rd_prod`
-    group by date
-    '''
-    all_deadline_dates = pd.read_gbq(query_get_dates, project_id=project_id, dialect='standard')
-
+    all_deadline_dates = get_deadline_data()
 
     ## ---------------------------- Get users url data by reactions ---------------------------- ##
     # Get user data
     users = {}
-    abs_outputDirectory = os.path.join(root_path, outputDirectory)
-    with open(os.path.join(abs_outputDirectory, 'users.json')) as json_file:
+    abs_output_directory = os.path.join(root_path, output_directory)
+    with open(os.path.join(abs_output_directory, 'users.json')) as json_file:
         user_json = json.load(json_file)
         for user in user_json:
             if not (user['is_bot'] or (user['name'] == 'slackbot')):
@@ -119,49 +90,17 @@ if __name__ == "__main__":
 
     # Get Filtered URLs from saved data
     # need dataz only from [3_*] channels
-    all_channels = os.listdir(abs_outputDirectory)
+    all_channels = os.listdir(abs_output_directory)
     filtered_channels = sorted([i for i in all_channels if i.startswith(args.channel_prefix)])
 
     # collect all data from filtered channels
     all_messages = []
     for channel in filtered_channels:
-        channel_path = os.path.join(abs_outputDirectory, channel)
+        channel_path = os.path.join(abs_output_directory, channel)
         for date in sorted(os.listdir(channel_path)):
             with open(os.path.join(channel_path, date)) as json_file:
                 json_data = json.load(json_file)
                 all_messages.extend(json_data)
-
-    def self_reaction_check(check_reaction, message):
-        '''
-        메세지에 self로 check_reaction을 입력했는지 확인
-        '''
-        reactions = message['reactions']
-        userId = message['user']
-        for reaction in reactions:
-            if reaction['name'] == check_reaction:
-                if userId in reaction['users']:
-                    return True
-        return False
-
-    # deadline date check
-    def check_deadline(deadline_str, time_str, d_type):
-        '''
-        string type로 입력된 deadline date (ex. 2019-07-22) 에 따라
-        submit_deadline(월요일 새벽 두시), pass_deadline(일요일 자정)으로
-        유효성 check
-        '''
-        deadline_time = datetime.strptime(deadline_str, '%Y-%m-%d')
-        # sunday 12am
-        pass_deadline = deadline_time
-        # monday 2am
-        submit_deadline = deadline_time + timedelta(hours=2)
-
-        time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
-
-        if d_type == 'submit':
-            return time < submit_deadline
-        elif d_type == 'pass':
-            return time < pass_deadline
 
 
     # filter data with reactions
@@ -209,22 +148,15 @@ if __name__ == "__main__":
             submit_data.loc[submit_data['userId'] == userId, 'deadline_check'] = isindeadline
             submit_data.loc[submit_data['userId'] == userId, 'message_id'] = message_id
 
-    with open(os.path.join(root_path, 'outputs/all_messages.json'), 'w') as outFile:
-        json.dump( all_messages , outFile, indent=4)
+    with open(os.path.join(root_path, 'outputs/all_messages.json'), 'w') as out_file:
+        json.dump(all_messages, out_file, indent=4)
 
     ## -------------------- save data as pandas DataFrame & send to BigQuery -------------------- ##
     print('Sending Data to BigQuery...')
 
     submit_data.to_gbq(log_table_id, project_id=project_id, if_exists='replace')
 
-    # status_table에 원하는 데이터만 추출해서 생성
-    query_status_table = '''
-    select name, team, time, url
-    from `geultto.slack_log.3rd_staging` as l left outer join `geultto.user_db.team_member` as r
-    on l.userId = r.id
-    where name IS NOT NULL
-    '''
-    status_table = pd.read_gbq(query_status_table, project_id=project_id, dialect='standard')
-    status_table.to_gbq(status_table_id, project_id=project_id, if_exists='replace')
+    status_df = get_status_data()
+    status_df.to_gbq(status_table_id, project_id=project_id, if_exists='replace')
 
     print('Succesfully sended.')
