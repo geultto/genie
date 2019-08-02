@@ -19,7 +19,7 @@ from time import sleep
 
 userNamesById = {}
 userIdsByName = {}
-slack = None
+slack = Slacker('xoxp-650100196370-665426011702-697836395031-cc566ec0417cedaa0c0e5268f33ff89e')
 dryRun = None
 
 # channelId is the id of the channel/group/im you want to download history for.
