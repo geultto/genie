@@ -67,7 +67,6 @@ if __name__ == "__main__":
 
     finalize(zip_name, output_directory)
 
-
     # ---------------------------- Parameters for BigQuery ---------------------------- #
     phase = args.gbq_phase
     project_id = bigquery_config[phase]['project']            # geultto
