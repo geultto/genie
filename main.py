@@ -1,12 +1,14 @@
-from slack_export import *
-import os, json, re
+import argparse
+import re
+from slacker import Slacker
 import pandas as pd
+from slack_export import *
 from utils import bigquery_config, root_path
 from checker import self_reaction_check, check_deadline
 from extract_data import get_status_data, get_deadline_data
 
 if __name__ == "__main__":
-    ## ---------------------------- save raw data from slack ---------------------------- ##
+    # ---------------------------- save raw data from slack ---------------------------- #
     # It will generate data files in output Directory
     slack_token = os.getenv('SLACK_TOKEN')
     parser = argparse.ArgumentParser(description='Export Slack history')
@@ -40,7 +42,7 @@ if __name__ == "__main__":
     slack = Slacker(args.token)
     dry_run = args.dry_run
     zip_name = args.zip
-    users, channels = bootstrapKeyValues(dry_run)
+    users, channels = bootstrap_key_values(slack, dry_run)
 
     output_directory = "outputs/{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
 
@@ -48,25 +50,25 @@ if __name__ == "__main__":
     os.chdir(output_directory)
 
     if not dry_run:
-        dumpUserFile(users)
-        dumpChannelFile(channels)
+        dump_user_file(users)
+        dump_channel_file(channels)
 
-    selected_channels = selectConversations(
+    selected_channels = select_conversations(
         channels,
         args.public_channels,
-        filterConversationsByName,
-        promptForPublicChannels,
+        filter_conversations_by_name,
+        prompt_for_public_channels,
         args)
 
     if len(selected_channels) > 0:
-        fetchPublicChannels(selected_channels, args.channel_prefix)
+        fetch_public_channels(selected_channels, args.channel_prefix)
 
     print('\nAll message data saved.\noutputs Directory: [%s]\n' % output_directory)
 
-    finalize(zip_name)
+    finalize(zip_name, output_directory)
 
 
-    ## ---------------------------- Parameters for BigQuery ---------------------------- ##
+    # ---------------------------- Parameters for BigQuery ---------------------------- #
     phase = args.gbq_phase
     project_id = bigquery_config[phase]['project']            # geultto
     table_suffix = bigquery_config[phase]['suffix']           # prod / staging
@@ -75,7 +77,7 @@ if __name__ == "__main__":
 
     all_deadline_dates = get_deadline_data()
 
-    ## ---------------------------- Get users url data by reactions ---------------------------- ##
+    # ---------------------------- Get users url data by reactions ---------------------------- #
     # Get user data
     users = {}
     abs_output_directory = os.path.join(root_path, output_directory)
@@ -102,58 +104,59 @@ if __name__ == "__main__":
                 json_data = json.load(json_file)
                 all_messages.extend(json_data)
 
-
     # filter data with reactions
     submit_reaction = 'submit'
     pass_reaction = 'pass'
-    submit_data = pd.DataFrame({'userId': userid, 'url': -1, 'time': -1, 'deadline_check': None, 'message_id': None} \
+    submit_data = pd.DataFrame({'user_id': userid, 'url': -1, 'time': -1, 'deadline_check': None, 'message_id': None} \
                                for userid in users)
     for message in all_messages:
+        message_id = message['client_msg_id']
         # 1) submit
         if (('attachments' in message.keys()) or ('<https://' in message['text'])) and ('reactions' in message.keys()):
             if self_reaction_check(submit_reaction, message):
-                userId = message['user']
+                user_id = message['user']
                 if 'attachments' in message.keys():
                     link = message['attachments'][0]['title_link']
                 # naver blog의 경우 attachments로 생성 안되어 regex로 잡기
-                elif ('<https://' in message['text']):
+                elif '<https://' in message['text']:
                     message_text = message['text']
                     pattern = re.compile('<https://.+?>')
                     link = pattern.search(message_text)
                     link = link.group()[1:-1]
+                # 이 부분 에러날 수 있겠네요! if문, elif 처리 후, else쪽에 없어서 밑에 link가 할당되지 않는 경우가 있을 수 있음
 
-                message_id = message['client_msg_id']
                 time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
-                isindeadline = check_deadline(args.deadline, time, submit_reaction)
+                is_in_deadline = check_deadline(args.deadline, time, submit_reaction)
 
-                if isindeadline:
-                    submit_data.loc[submit_data['userId'] == userId, 'url'] = link
+                if is_in_deadline:
+                    submit_data.loc[submit_data['user_id'] == user_id, 'url'] = link
                 else:
-                    submit_data.loc[submit_data['userId'] == userId, 'url'] = -1
-                submit_data.loc[submit_data['userId'] == userId, 'time'] = time
-                submit_data.loc[submit_data['userId'] == userId, 'deadline_check'] = isindeadline
-                submit_data.loc[submit_data['userId'] == userId, 'message_id'] = message_id
+                    submit_data.loc[submit_data['user_id'] == user_id, 'url'] = -1
+                submit_data.loc[submit_data['user_id'] == user_id, 'time'] = time
+                submit_data.loc[submit_data['user_id'] == user_id, 'deadline_check'] = is_in_deadline
+                submit_data.loc[submit_data['user_id'] == user_id, 'message_id'] = message_id
 
         # 2) pass
         if ('reactions' in message.keys()) and (self_reaction_check(pass_reaction, message)):
-            userId = message['user']
+            user_id = message['user']
             time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
-            isindeadline = check_deadline(args.deadline, time, pass_reaction)
+            is_in_deadline = check_deadline(args.deadline, time, pass_reaction)
 
-            if isindeadline:
-                submit_data.loc[submit_data['userId'] == userId, 'url'] = 'pass'
+            if is_in_deadline:
+                submit_data.loc[submit_data['user_id'] == user_id, 'url'] = 'pass'
             else:
-                submit_data.loc[submit_data['userId'] == userId, 'url'] = -1
-            submit_data.loc[submit_data['userId'] == userId, 'time'] = time
-            submit_data.loc[submit_data['userId'] == userId, 'deadline_check'] = isindeadline
-            submit_data.loc[submit_data['userId'] == userId, 'message_id'] = message_id
+                submit_data.loc[submit_data['user_id'] == user_id, 'url'] = -1
+            submit_data.loc[submit_data['user_id'] == user_id, 'time'] = time
+            submit_data.loc[submit_data['user_id'] == user_id, 'deadline_check'] = is_in_deadline
+            submit_data.loc[submit_data['user_id'] == user_id, 'message_id'] = message_id
 
     with open(os.path.join(root_path, 'outputs/all_messages.json'), 'w') as out_file:
         json.dump(all_messages, out_file, indent=4)
 
-    ## -------------------- save data as pandas DataFrame & send to BigQuery -------------------- ##
+    # -------------------- save data as pandas DataFrame & send to BigQuery -------------------- #
     print('Sending Data to BigQuery...')
 
+    submit_data = submit_data[['user_id', 'message_id', 'time', 'deadline_check', 'url']]
     submit_data.to_gbq(log_table_id, project_id=project_id, if_exists='replace')
 
     status_df = get_status_data()
