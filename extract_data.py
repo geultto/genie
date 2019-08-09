@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+from datetime import datetime, timedelta
 from utils import bigquery_config, phase, root_path
 
 _project_id = bigquery_config[phase]['project']
@@ -18,6 +19,8 @@ def get_deadline_data():
     group by date
     '''
     all_deadline_dates_df = pd.read_gbq(query, project_id=_project_id, dialect='standard', private_key=_jwt)
+    all_deadline_dates_df['date'] = all_deadline_dates_df['date'].apply(lambda i: i.replace('.', '-'))
+    all_deadline_dates_df['date'] = all_deadline_dates_df['date'].apply(lambda i: datetime.strptime(i, '%Y-%m-%d'))
     return all_deadline_dates_df
 
 
@@ -27,10 +30,12 @@ def get_status_data():
     :return: status_df
     """
     query = f'''
-    select name, team, time, url
+    select name, team, submit_num, time, url
     from `geultto.slack_log.3rd_{_suffix}` as l left outer join `geultto.user_db.team_member` as r
     on l.user_id = r.id
     where name IS NOT NULL
+    group by name, team, submit_num, time, url
+    order by submit_num, name
     '''
     status_df = pd.read_gbq(query, project_id=_project_id, dialect='standard', private_key=_jwt)
     return status_df
