@@ -17,7 +17,8 @@ if __name__ == "__main__":
     parser.add_argument('--zip', help="Name of a zip file to outputs as")
     parser.add_argument('--channel_prefix', default='3_', help="prefix of channel which need to be exported")
     parser.add_argument('--gbq_phase', default='development', help='BigQuery dealing phase: development / production')
-    parser.add_argument('--deadline', default='2019-07-22', help='deadline date (sunday): year-month-date')
+    parser.add_argument('--deadline', default='2019-08-12', help='deadline date (sunday): year-month-date')
+    parser.add_argument('--if_exists', default='append', help='BigQuery argument to deal with exisisting table: append / replace')
 
     parser.add_argument(
         '--dry_run',
@@ -106,48 +107,55 @@ if __name__ == "__main__":
     # filter data with reactions
     submit_reaction = 'submit'
     pass_reaction = 'pass'
-    submit_data = pd.DataFrame({'user_id': userid, 'url': -1, 'time': -1, 'deadline_check': None, 'message_id': None} \
-                               for userid in users)
+
+    # submit_num
+    deadline_time = datetime.strptime(args.deadline, '%Y-%m-%d')
+    submit_num = int(all_deadline_dates.loc[all_deadline_dates['date'] == deadline_time].index[0]) + 1
+
+    dataz = pd.DataFrame({'user_id': userid,
+                                'submit_num': submit_num,
+                                'url': -1,
+                                'time': -1,
+                                'deadline_check': None,
+                                'message_id': None}
+                                for userid in users)
+
     for message in all_messages:
-        message_id = message['client_msg_id']
-        # 1) submit
-        if (('attachments' in message.keys()) or ('<https://' in message['text'])) and ('reactions' in message.keys()):
-            if self_reaction_check(submit_reaction, message):
+        # deadline 안에 있는 message만 검사
+        time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
+        is_in_deadline = check_deadline(args.deadline, time, all_deadline_dates, submit_reaction)
+        if is_in_deadline:
+            # 1) submit
+            if (('attachments' in message.keys()) or ('<https://' in message['text'])) and ('reactions' in message.keys()):
+                if self_reaction_check(submit_reaction, message):
+                    message_id = message['client_msg_id']
+                    user_id = message['user']
+                    if 'attachments' in message.keys():
+                        link = message['attachments'][0]['title_link']
+                    # naver blog의 경우 attachments로 생성 안되어 regex로 잡기
+                    elif '<https://' in message['text']:
+                        message_text = message['text']
+                        pattern = re.compile('<https://.+?>')
+                        link = pattern.search(message_text)
+                        link = link.group()[1:-1]
+                    else:
+                        link = 'Link: Not Found, check required.'
+
+                    dataz.loc[dataz['user_id'] == user_id, 'url'] = link
+                    dataz.loc[dataz['user_id'] == user_id, 'time'] = time
+                    dataz.loc[dataz['user_id'] == user_id, 'deadline_check'] = is_in_deadline
+                    dataz.loc[dataz['user_id'] == user_id, 'message_id'] = message_id
+
+            # 2) pass
+            if ('reactions' in message.keys()) and (self_reaction_check(pass_reaction, message)):
+                message_id = message['client_msg_id']
                 user_id = message['user']
-                if 'attachments' in message.keys():
-                    link = message['attachments'][0]['title_link']
-                # naver blog의 경우 attachments로 생성 안되어 regex로 잡기
-                elif '<https://' in message['text']:
-                    message_text = message['text']
-                    pattern = re.compile('<https://.+?>')
-                    link = pattern.search(message_text)
-                    link = link.group()[1:-1]
-                # 이 부분 에러날 수 있겠네요! if문, elif 처리 후, else쪽에 없어서 밑에 link가 할당되지 않는 경우가 있을 수 있음
 
-                time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
-                is_in_deadline = check_deadline(args.deadline, time, submit_reaction)
+                dataz.loc[dataz['user_id'] == user_id, 'url'] = 'pass'
+                dataz.loc[dataz['user_id'] == user_id, 'time'] = time
+                dataz.loc[dataz['user_id'] == user_id, 'deadline_check'] = is_in_deadline
+                dataz.loc[dataz['user_id'] == user_id, 'message_id'] = message_id
 
-                if is_in_deadline:
-                    submit_data.loc[submit_data['user_id'] == user_id, 'url'] = link
-                else:
-                    submit_data.loc[submit_data['user_id'] == user_id, 'url'] = -1
-                submit_data.loc[submit_data['user_id'] == user_id, 'time'] = time
-                submit_data.loc[submit_data['user_id'] == user_id, 'deadline_check'] = is_in_deadline
-                submit_data.loc[submit_data['user_id'] == user_id, 'message_id'] = message_id
-
-        # 2) pass
-        if ('reactions' in message.keys()) and (self_reaction_check(pass_reaction, message)):
-            user_id = message['user']
-            time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
-            is_in_deadline = check_deadline(args.deadline, time, pass_reaction)
-
-            if is_in_deadline:
-                submit_data.loc[submit_data['user_id'] == user_id, 'url'] = 'pass'
-            else:
-                submit_data.loc[submit_data['user_id'] == user_id, 'url'] = -1
-            submit_data.loc[submit_data['user_id'] == user_id, 'time'] = time
-            submit_data.loc[submit_data['user_id'] == user_id, 'deadline_check'] = is_in_deadline
-            submit_data.loc[submit_data['user_id'] == user_id, 'message_id'] = message_id
 
     with open(os.path.join(root_path, 'outputs/all_messages.json'), 'w') as out_file:
         json.dump(all_messages, out_file, indent=4)
@@ -155,10 +163,11 @@ if __name__ == "__main__":
     # -------------------- save data as pandas DataFrame & send to BigQuery -------------------- #
     print('Sending Data to BigQuery...')
 
-    submit_data = submit_data[['user_id', 'message_id', 'time', 'deadline_check', 'url']]
-    submit_data.to_gbq(log_table_id, project_id=project_id, if_exists='replace')
+    dataz = dataz[['user_id', 'submit_num', 'message_id', 'time', 'deadline_check', 'url']]
+    dataz.to_gbq(log_table_id, project_id=project_id, if_exists=args.if_exists)
 
     status_df = get_status_data()
+    # slack_log에 모두 저장된 데이터 바탕으로 query 날려서 새로 정렬하는 것이므로 항상 replace 인자 사용
     status_df.to_gbq(status_table_id, project_id=project_id, if_exists='replace')
 
     print('Succesfully sended.')
