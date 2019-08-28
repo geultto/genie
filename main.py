@@ -17,8 +17,8 @@ if __name__ == "__main__":
     parser.add_argument('--zip', help="Name of a zip file to outputs as")
     parser.add_argument('--channel_prefix', default='3_', help="prefix of channel which need to be exported")
     parser.add_argument('--gbq_phase', default='development', help='BigQuery dealing phase: development / production')
-    parser.add_argument('--deadline', default='2019-08-12', help='deadline date (sunday): year-month-date')
-    parser.add_argument('--if_exists', default='replace', help='BigQuery argument to deal with exisisting table: append / replace')
+    parser.add_argument('--if_exists_prod', default='append', help='BigQuery argument to deal with exisisting table: append / replace')
+    parser.add_argument('--deadline', default='2019-08-26', help='deadline date (Monday): year-month-date')
 
     parser.add_argument(
         '--dry_run',
@@ -69,12 +69,18 @@ if __name__ == "__main__":
 
     finalize(zip_name, output_directory)
 
+
     # ---------------------------- Parameters for BigQuery ---------------------------- #
     phase = args.gbq_phase
     project_id = bigquery_config[phase]['project']            # geultto
-    table_suffix = bigquery_config[phase]['suffix']           # prod / staging
+    if phase == 'production':
+        prod_table_suffix = bigquery_config[phase]['suffix']           # prod
+        prod_log_table_id = 'slack_log.3rd_{}'.format(prod_table_suffix)
+        prod_status_table_id = 'status_board.3rd_{}'.format(prod_table_suffix)
+    table_suffix = bigquery_config['development']['suffix']           # staging
     log_table_id = 'slack_log.3rd_{}'.format(table_suffix)
     status_table_id = 'status_board.3rd_{}'.format(table_suffix)
+
 
     print('Getting data from BigQuery...')
     all_deadline_dates = get_deadline_data()
@@ -93,6 +99,7 @@ if __name__ == "__main__":
     peer_reviewers = get_peer_reviewer_data()
     print('Done.\n')
 
+
     # ---------------------------- Get users url data by reactions ---------------------------- #
     print('Now collecting user messages...')
     # Get user data
@@ -106,6 +113,7 @@ if __name__ == "__main__":
     all_messages = get_all_messages(filtered_channels, abs_output_directory)
 
     print('Done.\n')
+
 
     # ---------------------------- submit / pass / feedback check ---------------------------- #
     dataz = all_message_check(
@@ -122,10 +130,17 @@ if __name__ == "__main__":
     # -------------------- save data as pandas DataFrame & send to BigQuery -------------------- #
     print('All messages checked.\n\nSending Data to BigQuery...')
 
-    dataz.to_gbq(log_table_id, project_id=project_id, if_exists=args.if_exists)
+    # staging table에 새로운 데이터 전송
+    dataz.to_gbq(log_table_id, project_id=project_id, if_exists='replace')
+    # prod table에는 기존에 쌓인 데이터위에 새로운 데이터 추가
+    if phase == 'production':
+        dataz.to_gbq(prod_log_table_id, project_id=project_id, if_exists=args.if_exists_prod)
+
 
     status_df = get_status_data()
     # slack_log에 모두 저장된 데이터 바탕으로 query 날려서 새로 정렬하는 것이므로 항상 replace 인자 사용
     status_df.to_gbq(status_table_id, project_id=project_id, if_exists='replace')
+    if phase == 'production':
+        status_df.to_gbq(prod_status_table_id, project_id=project_id, if_exists=args.if_exists_prod)
 
     print('Succesfully sended.')

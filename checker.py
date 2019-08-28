@@ -157,16 +157,18 @@ def all_message_check(users, deadline, all_deadline_dates, peer_reviewers, submi
     for message in all_messages:
         # deadline 안에 있는 message만 검사
         time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
-        is_in_deadline = check_deadline(deadline, time, all_deadline_dates, submit_reaction)
-        if is_in_deadline:
-            # 1) submit
+        is_in_submit_deadline = check_deadline(deadline, time, all_deadline_dates, submit_reaction)
+        is_in_pass_deadline = check_deadline(deadline, time, all_deadline_dates, pass_reaction)
+        # 1) submit
+        if is_in_submit_deadline:
             message_check(message, dataz, users, peer_reviewers, submit_num, all_slack_log, check_reaction='submit')
-            # 2) pass
-            message_check(message, dataz, users, peer_reviewers, submit_num, all_slack_log, check_reaction='pass')
-            # 3) feedback
+            # 2) feedback
             # feedback은 두 번째 이후부터 체크
             if submit_num > 1:
                 message_check(message, dataz, users, peer_reviewers, submit_num, all_slack_log, check_reaction='feedback')
+        # 3) pass
+        if is_in_pass_deadline:
+            message_check(message, dataz, users, peer_reviewers, submit_num, all_slack_log, check_reaction='pass')
 
     # feedback을 받아야 하는 사람이 글을 안 쓴 경우 (pass / -1 인 경우)
     # pass_{name} 또는 -1_{name} 으로 입력
