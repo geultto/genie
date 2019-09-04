@@ -8,7 +8,7 @@ _suffix = bigquery_config[phase]['suffix']
 _jwt = os.path.join(root_path, 'config', bigquery_config[phase]['jwt'])
 
 
-def get_deadline_data():
+def get_deadline_data(abs_output_directory):
     """
     feedback 위해 글또 3기의 제출 마감 날짜 목록 추출
     :return: dataframe, 데드라인의 날짜가 모두 저장된 데이터프레임
@@ -20,7 +20,11 @@ def get_deadline_data():
     '''
     all_deadline_dates_df = pd.read_gbq(query, project_id=_project_id, dialect='standard', private_key=_jwt)
     all_deadline_dates_df['date'] = all_deadline_dates_df['date'].apply(lambda i: i.replace('.', '-'))
+    deadline_dates_json = all_deadline_dates_df.to_dict()
     all_deadline_dates_df['date'] = all_deadline_dates_df['date'].apply(lambda i: datetime.strptime(i, '%Y-%m-%d'))
+    # deadline dates를 json file 형태로 저장
+    with open(os.path.join(abs_output_directory, 'deadline_dates.json'), 'w') as out_file:
+        json.dump(deadline_dates_json, out_file, indent=4)
     return all_deadline_dates_df
 
 
@@ -99,18 +103,31 @@ def get_all_users(abs_output_directory):
     return users
 
 
-def get_all_messages(filtered_channels, abs_output_directory):
+def get_all_messages(filtered_channels, abs_slack_export_directory):
     """
     원하는 채널의 all_messages 추출
     :return: list
     """
     all_messages = []
     for channel in filtered_channels:
-        channel_path = os.path.join(abs_output_directory, channel)
+        channel_path = os.path.join(abs_slack_export_directory, channel)
         for date in sorted(os.listdir(channel_path)):
             with open(os.path.join(channel_path, date)) as json_file:
                 json_data = json.load(json_file)
                 all_messages.extend(json_data)
-    with open(os.path.join(root_path, 'outputs/all_messages.json'), 'w') as out_file:
+    with open(os.path.join(abs_slack_export_directory, 'all_messages.json'), 'w') as out_file:
         json.dump(all_messages, out_file, indent=4)
     return all_messages
+
+
+def send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, prod_log_table_id, prod_status_table_id, if_exists_prod):
+    # staging table에 새로운 데이터 전송
+    dataz.to_gbq(log_table_id, project_id=project_id, if_exists='replace')
+    # prod table에는 기존에 쌓인 데이터위에 새로운 데이터 추가
+    if phase == 'production':
+        dataz.to_gbq(prod_log_table_id, project_id=project_id, if_exists=if_exists_prod)
+    status_df = get_status_data()
+    # slack_log에 모두 저장된 데이터 바탕으로 query 날려서 새로 정렬하는 것이므로 항상 replace 인자 사용
+    status_df.to_gbq(status_table_id, project_id=project_id, if_exists='replace')
+    if phase == 'production':
+        status_df.to_gbq(prod_status_table_id, project_id=project_id, if_exists=if_exists_prod)

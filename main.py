@@ -3,8 +3,8 @@ from slacker import Slacker
 import pandas as pd
 from slack_export import *
 from utils import bigquery_config, root_path
-from checker import self_reaction_check, check_deadline, message_check, feedback_check, all_message_check
-from extract_data import get_status_data, get_deadline_data, get_peer_reviewer_data
+from checker import all_message_check
+from extract_data import get_status_data, get_deadline_data, get_peer_reviewer_data, send_data_to_gbq
 from extract_data import get_all_slack_log, get_all_status_board, get_all_users, get_all_messages
 
 if __name__ == "__main__":
@@ -16,8 +16,8 @@ if __name__ == "__main__":
     parser.add_argument('--token', default=slack_token, help="Slack API token")
     parser.add_argument('--zip', help="Name of a zip file to outputs as")
     parser.add_argument('--channel_prefix', default='3_', help="prefix of channel which need to be exported")
-    parser.add_argument('--gbq_phase', default='development', help='BigQuery dealing phase: development / production')
-    parser.add_argument('--if_exists_prod', default='append', help='BigQuery argument to deal with exisisting table: append / replace')
+    parser.add_argument('--gbq_phase', default='production', help='BigQuery dealing phase: development / production')
+    parser.add_argument('--run_all_deadlines_before', default=True, help='run all deadlines before / run only this submission')
     parser.add_argument('--deadline', default='2019-08-26', help='deadline date (Monday): year-month-date')
 
     parser.add_argument(
@@ -46,7 +46,8 @@ if __name__ == "__main__":
     users, channels = bootstrap_key_values(slack, dry_run)
 
     output_directory = "outputs/{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
-    abs_output_directory = os.path.join(root_path, output_directory)
+    abs_output_directory = os.path.join(root_path, 'outputs')
+    abs_slack_export_directory = os.path.join(root_path, output_directory)
 
     mkdir(output_directory)
     os.chdir(output_directory)
@@ -77,19 +78,23 @@ if __name__ == "__main__":
         prod_table_suffix = bigquery_config[phase]['suffix']           # prod
         prod_log_table_id = 'slack_log.3rd_{}'.format(prod_table_suffix)
         prod_status_table_id = 'status_board.3rd_{}'.format(prod_table_suffix)
+    else:
+        prod_table_suffix = None
+        prod_log_table_id = None
+        prod_status_table_id = None
     table_suffix = bigquery_config['development']['suffix']           # staging
     log_table_id = 'slack_log.3rd_{}'.format(table_suffix)
     status_table_id = 'status_board.3rd_{}'.format(table_suffix)
 
 
     print('Getting data from BigQuery...')
-    all_deadline_dates = get_deadline_data()
+    all_deadline_dates = get_deadline_data(abs_output_directory)
     # submit_num
     deadline_time = datetime.strptime(args.deadline, '%Y-%m-%d')
-    submit_num = int(all_deadline_dates.loc[all_deadline_dates['date'] == deadline_time].index[0]) + 1
-    # feedback check는 submit_num이 2 이상일 때부터 하므로
-    # submit_num == 1일 때는 전체 데이터를 수집하지 않음
-    if submit_num == 1:
+    submit_num = int(all_deadline_dates.loc[all_deadline_dates['date'] == deadline_time].index[0])
+    # feedback check는 submit_num이 1 이상일 때부터 하므로
+    # submit_num == 0일 때는 전체 데이터를 수집하지 않음
+    if submit_num == 0:
         all_slack_log = None
         all_status_board = None
     else:
@@ -107,40 +112,73 @@ if __name__ == "__main__":
 
     # Get Filtered URLs from saved data
     # need dataz only from [3_*] channels
-    all_channels = os.listdir(abs_output_directory)
+    all_channels = os.listdir(abs_slack_export_directory)
     filtered_channels = sorted([i for i in all_channels if i.startswith(args.channel_prefix)])
     # collect all data from filtered channels
-    all_messages = get_all_messages(filtered_channels, abs_output_directory)
+    all_messages = get_all_messages(filtered_channels, abs_slack_export_directory)
 
     print('Done.\n')
 
 
     # ---------------------------- submit / pass / feedback check ---------------------------- #
-    dataz = all_message_check(
-        users,
-        args.deadline,
-        all_deadline_dates,
-        peer_reviewers,
-        submit_num,
-        all_slack_log,
-        all_status_board,
-        all_messages)
+    # ------------------- save data as pandas DataFrame & send to BigQuery ------------------- #
+    run_all_deadlines_before = args.run_all_deadlines_before
+    if run_all_deadlines_before:
+        print('Check and build data from beginning of deadline. Run with all deadline dates.')
+        # 지금 파라미터로 들어온 deadline 이전 날짜에 대해 모두 돌리기
+        # 첫 번째 날짜는 replace로, 두 번째부터는 append로 돌리기
+        for num in range(submit_num+1):
+            if num == 0:
+                print('Checking all messages by reactions...')
+                deadline = all_deadline_dates.loc[num]['date'].strftime('%Y-%m-%d')
+                if_exists_prod = 'replace'
+                dataz = all_message_check(
+                    users,
+                    deadline,
+                    all_deadline_dates,
+                    peer_reviewers,
+                    num,
+                    all_slack_log,
+                    all_status_board,
+                    all_messages)
+                send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, \
+                                 prod_log_table_id, prod_status_table_id, if_exists_prod)
+            else:
+                deadline = all_deadline_dates.loc[num]['date'].strftime("%Y-%m-%d")
+                if_exists_prod = 'append'
+                dataz = all_message_check(
+                    users,
+                    deadline,
+                    all_deadline_dates,
+                    peer_reviewers,
+                    num,
+                    all_slack_log,
+                    all_status_board,
+                    all_messages)
+                print('All messages checked.\n\nSending Data to BigQuery...')
+                send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, \
+                                 prod_log_table_id, prod_status_table_id, if_exists_prod)
 
+    # run only this submission
+    else:
+        print('Check and build data by only this submission. Appending data at the end of table made before.')
+        print('Checking all messages by reactions...')
+        dataz = all_message_check(
+            users,
+            args.deadline,
+            all_deadline_dates,
+            peer_reviewers,
+            submit_num,
+            all_slack_log,
+            all_status_board,
+            all_messages)
+        print('All messages checked.\n\nSending Data to BigQuery...')
+        if submit_num > 0:
+            if_exists_prod = 'append'
+        else:
+            if_exists_prod = 'replace'
+        send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, \
+                         prod_log_table_id, prod_status_table_id, if_exists_prod)
 
-    # -------------------- save data as pandas DataFrame & send to BigQuery -------------------- #
-    print('All messages checked.\n\nSending Data to BigQuery...')
-
-    # staging table에 새로운 데이터 전송
-    dataz.to_gbq(log_table_id, project_id=project_id, if_exists='replace')
-    # prod table에는 기존에 쌓인 데이터위에 새로운 데이터 추가
-    if phase == 'production':
-        dataz.to_gbq(prod_log_table_id, project_id=project_id, if_exists=args.if_exists_prod)
-
-
-    status_df = get_status_data()
-    # slack_log에 모두 저장된 데이터 바탕으로 query 날려서 새로 정렬하는 것이므로 항상 replace 인자 사용
-    status_df.to_gbq(status_table_id, project_id=project_id, if_exists='replace')
-    if phase == 'production':
-        status_df.to_gbq(prod_status_table_id, project_id=project_id, if_exists=args.if_exists_prod)
 
     print('Succesfully sended.')
