@@ -107,10 +107,6 @@ def message_check(message, dataz, users, peer_reviewers, submit_num, all_slack_l
             two_reviewers = two_reviewers[['same_team_reviewer', 'other_team_reviewer']].values[0]
             # writer: 피드백 받은 글을 쓴 사람
             writer_name = users[message['parent_user_id']]
-            # writer가 쓴 글의 message_id
-            now_slack_log = all_slack_log.loc[all_slack_log['submit_num'] == submit_num-1]
-            writer_message_id = now_slack_log.loc[now_slack_log['user_id'] == \
-                                                  message['parent_user_id']]['message_id'].values[0]
             if writer_name == two_reviewers[0]:
                 dataz.loc[dataz['user_id'] == user_id, 'same_team_reviewer'] = f'{writer_name}_1'
             elif writer_name == two_reviewers[1]:
@@ -119,22 +115,32 @@ def message_check(message, dataz, users, peer_reviewers, submit_num, all_slack_l
 
 def feedback_check(dataz, users, peer_reviewers, submit_num, all_status_board):
     for user_id, user_name in users.items():
-        if submit_num == 1:
-            dataz.loc[dataz['user_id'] == user_id, 'same_team_reviewer'] = None
-            dataz.loc[dataz['user_id'] == user_id, 'other_team_reviewer'] = None
         two_reviewers = peer_reviewers.loc[peer_reviewers['name'] == user_name]
         two_reviewers = two_reviewers.loc[two_reviewers['submit_num'] == submit_num-1]
         two_reviewers = two_reviewers[['same_team_reviewer', 'other_team_reviewer']].values
         if len(two_reviewers) > 0:
             two_reviewers = two_reviewers[0]
-        for idx, writer_name in enumerate(two_reviewers):
-            previous_submit = all_status_board.loc[all_status_board['submit_num'] == submit_num-1]
-            previous_submit = previous_submit.loc[previous_submit['name'] == writer_name, 'url'].values[0]
-            if previous_submit in ['pass', '-1']:
-                if idx == 0:
-                    dataz.loc[dataz['user_id'] == user_id, 'same_team_reviewer'] = f'{writer_name}_{previous_submit}'
-                elif idx == 1:
-                    dataz.loc[dataz['user_id'] == user_id, 'other_team_reviewer'] = f'{writer_name}_{previous_submit}'
+        # 글을 안 쓴 경우 feedback도 pass
+        url_status = dataz.loc[dataz['user_id'] == user_id, 'url'].values
+        if url_status == -1:
+            dataz.loc[dataz['user_id'] == user_id, 'same_team_reviewer'] = 'no post'
+            dataz.loc[dataz['user_id'] == user_id, 'other_team_reviewer'] = 'no post'
+        # 글을 pass한 경우 feedback도 pass
+        elif url_status == 'pass':
+            dataz.loc[dataz['user_id'] == user_id, 'same_team_reviewer'] = 'pass post'
+            dataz.loc[dataz['user_id'] == user_id, 'other_team_reviewer'] = 'pass post'
+        else:
+            for idx, writer_name in enumerate(two_reviewers):
+                previous_submit = all_status_board.loc[all_status_board['submit_num'] == submit_num-1]
+                previous_submit = previous_submit.loc[previous_submit['name'] == writer_name, 'url'].values[0]
+                if previous_submit in ['pass', '-1']:
+                    if idx == 0:
+                        dataz.loc[dataz['user_id'] == user_id, 'same_team_reviewer'] = f'{writer_name}_{previous_submit}'
+                    elif idx == 1:
+                        dataz.loc[dataz['user_id'] == user_id, 'other_team_reviewer'] = f'{writer_name}_{previous_submit}'
+        if submit_num == 0:
+            dataz.loc[dataz['user_id'] == user_id, 'same_team_reviewer'] = None
+            dataz.loc[dataz['user_id'] == user_id, 'other_team_reviewer'] = None
 
 
 def all_message_check(users, deadline, all_deadline_dates, peer_reviewers, submit_num, \
@@ -149,11 +155,10 @@ def all_message_check(users, deadline, all_deadline_dates, peer_reviewers, submi
                           'time': -1,
                           'deadline_check': None,
                           'message_id': None,
-                          'same_team_reviewer': '-0.5',
-                          'other_team_reviewer': '-0.5'}
+                          'same_team_reviewer': '-0.25',
+                          'other_team_reviewer': '-0.25'}
                           for userid in users)
 
-    print('Checking all messages by reactions...')
     for message in all_messages:
         # deadline 안에 있는 message만 검사
         time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
@@ -164,7 +169,7 @@ def all_message_check(users, deadline, all_deadline_dates, peer_reviewers, submi
             message_check(message, dataz, users, peer_reviewers, submit_num, all_slack_log, check_reaction='submit')
             # 2) feedback
             # feedback은 두 번째 이후부터 체크
-            if submit_num > 1:
+            if submit_num > 0:
                 message_check(message, dataz, users, peer_reviewers, submit_num, all_slack_log, check_reaction='feedback')
         # 3) pass
         if is_in_pass_deadline:
