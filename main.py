@@ -1,4 +1,4 @@
-import argparse
+import argparse, time
 from slacker import Slacker
 import pandas as pd
 from slack_export import *
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument('--channel_prefix', default='3_', help="prefix of channel which need to be exported")
     parser.add_argument('--gbq_phase', default='production', help='BigQuery dealing phase: development / production')
     parser.add_argument('--run_all_deadlines_before', default=True, help='run all deadlines before / run only this submission')
-    parser.add_argument('--deadline', default='2019-08-26', help='deadline date (Monday): year-month-date')
+    parser.add_argument('--deadline', default='2019-09-09', help='deadline date (Monday): year-month-date')
 
     parser.add_argument(
         '--dry_run',
@@ -124,44 +124,36 @@ if __name__ == "__main__":
     # ------------------- save data as pandas DataFrame & send to BigQuery ------------------- #
     run_all_deadlines_before = args.run_all_deadlines_before
     if run_all_deadlines_before:
-        print('Check and build data from beginning of deadline. Run with all deadline dates.')
+        print('Check and build with all deadline dates.\n')
+        print('Checking all messages by reactions...')
         # 지금 파라미터로 들어온 deadline 이전 날짜에 대해 모두 돌리기
-        # 첫 번째 날짜는 replace로, 두 번째부터는 append로 돌리기
         for num in range(submit_num+1):
+            deadline = all_deadline_dates.loc[num]['date'].strftime('%Y-%m-%d')
+            dataz = all_message_check(
+                users,
+                deadline,
+                all_deadline_dates,
+                peer_reviewers,
+                num,
+                all_slack_log,
+                all_status_board,
+                all_messages)
+            print('{}/{} messages checked. Sending Data to BigQuery...'.format(num+1, submit_num+1))
+
+            # 첫 번째 날짜는 replace로, 두 번째부터는 append로 돌리기
             if num == 0:
-                print('Checking all messages by reactions...')
-                deadline = all_deadline_dates.loc[num]['date'].strftime('%Y-%m-%d')
                 if_exists_prod = 'replace'
-                dataz = all_message_check(
-                    users,
-                    deadline,
-                    all_deadline_dates,
-                    peer_reviewers,
-                    num,
-                    all_slack_log,
-                    all_status_board,
-                    all_messages)
-                send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, \
-                                 prod_log_table_id, prod_status_table_id, if_exists_prod)
             else:
-                deadline = all_deadline_dates.loc[num]['date'].strftime("%Y-%m-%d")
                 if_exists_prod = 'append'
-                dataz = all_message_check(
-                    users,
-                    deadline,
-                    all_deadline_dates,
-                    peer_reviewers,
-                    num,
-                    all_slack_log,
-                    all_status_board,
-                    all_messages)
-                print('All messages checked.\n\nSending Data to BigQuery...')
-                send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, \
-                                 prod_log_table_id, prod_status_table_id, if_exists_prod)
+            send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, \
+                             prod_log_table_id, prod_status_table_id, if_exists_prod)
+            print('Sent.'.format(num+1, submit_num))
+            time.sleep(10)
+        print('\nSuccesfully All sent.')
 
     # run only this submission
     else:
-        print('Check and build data by only this submission. Appending data at the end of table made before.')
+        print('Check and build data by only this submission. \nAppending data at the end of table made before.\n')
         print('Checking all messages by reactions...')
         dataz = all_message_check(
             users,
@@ -172,6 +164,7 @@ if __name__ == "__main__":
             all_slack_log,
             all_status_board,
             all_messages)
+
         print('All messages checked.\n\nSending Data to BigQuery...')
         if submit_num > 0:
             if_exists_prod = 'append'
@@ -180,5 +173,4 @@ if __name__ == "__main__":
         send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, \
                          prod_log_table_id, prod_status_table_id, if_exists_prod)
 
-
-    print('Succesfully sended.')
+        print('Succesfully All sent.')
