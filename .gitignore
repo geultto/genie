@@ -1,3 +1,10 @@
+# Output Directory / files
+*-slack_export/
+*.json
+*.csv
+notebooks/
+*.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
