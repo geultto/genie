@@ -97,6 +97,7 @@ def message_check(message, dataz, users, peer_reviewers, submit_num, all_slack_l
                     link = 'Link: Submitted but not Found, check required.'
                 dataz.loc[dataz['user_id'] == user_id, 'url'] = link
                 dataz.loc[dataz['user_id'] == user_id, 'time'] = time
+                dataz.loc[dataz['user_id'] == user_id, 'timestamp'] = float(message['ts'])
                 dataz.loc[dataz['user_id'] == user_id, 'deadline_check'] = True
                 dataz.loc[dataz['user_id'] == user_id, 'message_id'] = message_id
 
@@ -106,6 +107,7 @@ def message_check(message, dataz, users, peer_reviewers, submit_num, all_slack_l
             user_id = message['user']
             dataz.loc[dataz['user_id'] == user_id, 'url'] = 'pass'
             dataz.loc[dataz['user_id'] == user_id, 'time'] = time
+            dataz.loc[dataz['user_id'] == user_id, 'timestamp'] = float(message['ts'])
             dataz.loc[dataz['user_id'] == user_id, 'deadline_check'] = True
             dataz.loc[dataz['user_id'] == user_id, 'message_id'] = message_id
 
@@ -166,6 +168,7 @@ def all_message_check(users, deadline, all_deadline_dates, peer_reviewers, submi
                           'submit_num': submit_num,
                           'url': -1,
                           'time': -1,
+                          'timestamp': -1,
                           'deadline_check': None,
                           'message_id': None,
                           'same_team_reviewer': '-0.25',

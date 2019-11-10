@@ -75,11 +75,11 @@ def get_status_data():
     :return: status_df
     """
     query = f'''
-    select name, team, submit_num, same_team_reviewer, other_team_reviewer, time, url
+    select name, team, submit_num, same_team_reviewer, other_team_reviewer, time, url, timestamp
     from `geultto.slack_log.3rd_{_suffix}` as l left outer join `geultto.user_db.team_member` as r
     on l.user_id = r.id
     where name IS NOT NULL
-    group by name, team, submit_num, time, url, same_team_reviewer, other_team_reviewer
+    group by name, team, submit_num, time, timestamp, url, same_team_reviewer, other_team_reviewer
     order by submit_num, name
     '''
     status_df = pd.read_gbq(query, project_id=_project_id, dialect='standard', private_key=_jwt)
