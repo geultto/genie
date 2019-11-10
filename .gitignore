@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# directory
+.DS_store
+outputs/
+notebooks/
+config/
+
 # C extensions
 *.so
 
