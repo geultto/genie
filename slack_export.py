@@ -145,7 +145,7 @@ def dump_channel_file(channels):
     print("\nMaking channels file")
 
     # We will be overwriting this file on each run.
-    with open('channels.json', 'w') as out_file:
+    with open('../channels.json', 'w') as out_file:
         json.dump(channels, out_file, indent=4)
 
 
