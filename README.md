@@ -17,6 +17,7 @@
 ├── main.py : 메인 실행 스크립트
 ├── slack_export.py : slack 데이터 추출 스크립트
 ├── checker.py : slack message에서 글 제출 확인 로직
+├── extract_data.py : bigquery 및 json data 처리
 └── tests : 테스트 코드
     └── README.md : pytest 관련 자료 모음
 ```
