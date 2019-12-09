@@ -145,7 +145,7 @@ def dump_channel_file(channels):
     print("\nMaking channels file")
 
     # We will be overwriting this file on each run.
-    with open('channels.json', 'w') as out_file:
+    with open('../channels.json', 'w') as out_file:
         json.dump(channels, out_file, indent=4)
 
 
@@ -165,7 +165,7 @@ def dump_user_file(users):
     stores json of user info
     write to user file, any existing file needs to be overwritten.
     """
-    with open( "users.json", 'w') as userFile:
+    with open(os.path.join('../', 'users.json'), 'w') as userFile:
         json.dump( users, userFile, indent=4 )
 
 
