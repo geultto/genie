@@ -11,14 +11,12 @@
 
 ### Architecture
 ```
-├── README.md
-├── config : 설정 관련 폴더
-├── main.py : 메인 실행
+├── config : 설정 관련 데이터
+├── outputs : slack에서 가져온 데이터 저장
 ├── notebooks : 테스트용 노트북 저장 폴더
-├── outputs : 결과물 저장하는 폴더
-├── postprocessing.py : 후처리 스크립트
-├── requirements.txt
-├── slack_export.py : 슬랙 추출 스크립트
+├── main.py : 메인 실행 스크립트
+├── slack_export.py : slack 데이터 추출 스크립트
+├── checker.py : slack message에서 글 제출 확인 로직
 └── tests : 테스트 코드
     └── README.md : pytest 관련 자료 모음
 ```
@@ -42,12 +40,14 @@ pip3 install -r requirements.txt
 
 ```
 python main.py --channel_prefix 3_
-               --gbq_phase development
+               --gbq_phase production
                --deadline 2019-07-22
+               --run_all False
 ```
   - `channel_prefix` : 추출하기 원하는 채널의 접두사 (ex. '1_', '2_' 등)
   - `gbq_phase` : 실행시키는 용도 ('development' 또는 'production'으로 입력)
   - `deadline` : 현재 제출의 마감 기한 (year-month-day 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)
+  - `run_all` : True - 모든 deadline에 대해 체크 / False - 이번 deadline에 대해서만 체크
 
 
 ### Crontab
