@@ -17,58 +17,50 @@ if __name__ == "__main__":
     parser.add_argument('--zip', help="Name of a zip file to outputs as")
     parser.add_argument('--channel_prefix', default='3_', help="prefix of channel which need to be exported")
     parser.add_argument('--gbq_phase', default='production', help='BigQuery dealing phase: development / production')
-    parser.add_argument('--run_all_deadlines_before', default=True, help='run all deadlines before / run only this submission')
-    parser.add_argument('--deadline', default='2019-09-09', help='deadline date (Monday): year-month-date')
+    parser.add_argument('--run_all', default=False, help='run all deadlines before / run only this submission')
+    parser.add_argument('--deadline', required=True, help='deadline date (Monday): yyyy-mm-dd')
+    parser.add_argument('--data_dir',  default=False, help='data dir to get all messages')
+    parser.add_argument('--dump_id_files', action='store_true', default=False, help="restore user/channnel ids")
+    parser.add_argument('--public_channels', nargs='*', default=None, metavar='CHANNEL_NAME', help="Export the given Public Channels")
 
-    parser.add_argument(
-        '--dry_run',
-        action='store_true',
-        default=False,
-        help="List the conversations that will be exported (don't fetch/write history)")
-
-    parser.add_argument(
-        '--public_channels',
-        nargs='*',
-        default=None,
-        metavar='CHANNEL_NAME',
-        help="Export the given Public Channels")
-
-    parser.add_argument(
-        '--prompt',
-        action='store_true',
-        default=False,
-        help="Prompt you to select the conversations to export")
 
     args = parser.parse_args()
     slack = Slacker(args.token)
-    dry_run = args.dry_run
+    dump_id_files = args.dump_id_files
     zip_name = args.zip
     users, channels = bootstrap_key_values(slack, dry_run)
 
-    output_directory = "outputs/{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
-    abs_output_directory = os.path.join(root_path, 'outputs')
-    abs_slack_export_directory = os.path.join(root_path, output_directory)
+    if not args.data_dir:
+        output_directory = "outputs/{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
+        abs_output_directory = os.path.join(root_path, 'outputs')
+        abs_slack_export_directory = os.path.join(root_path, output_directory)
 
-    mkdir(output_directory)
-    os.chdir(output_directory)
+        mkdir(output_directory)
+        os.chdir(output_directory)
 
-    if not dry_run:
-        dump_user_file(users)
-        dump_channel_file(channels)
+        if dump_id_files:
+            dump_user_file(users)
+            dump_channel_file(channels)
 
-    selected_channels = select_conversations(
-        channels,
-        args.public_channels,
-        filter_conversations_by_name,
-        prompt_for_public_channels,
-        args)
+        selected_channels = select_conversations(
+            channels,
+            args.public_channels,
+            filter_conversations_by_name,
+            prompt_for_public_channels,
+            args)
 
-    if len(selected_channels) > 0:
-        fetch_public_channels(selected_channels, args.channel_prefix)
+        if len(selected_channels) > 0:
+            fetch_public_channels(selected_channels, args.channel_prefix)
 
-    print('\nAll message data saved.\noutputs Directory: [%s]\n' % output_directory)
+        print('\nAll message data saved.\noutputs Directory: [%s]\n' % output_directory)
 
-    finalize(zip_name, output_directory)
+        finalize(zip_name, output_directory)
+
+    else:
+        output_directory = "outputs/{}".format(args.data_dir)
+        abs_output_directory = os.path.join(root_path, 'outputs')
+        abs_slack_export_directory = os.path.join(root_path, output_directory)
+        os.chdir(output_directory)
 
 
     # ---------------------------- Parameters for BigQuery ---------------------------- #
@@ -122,8 +114,8 @@ if __name__ == "__main__":
 
     # ---------------------------- submit / pass / feedback check ---------------------------- #
     # ------------------- save data as pandas DataFrame & send to BigQuery ------------------- #
-    run_all_deadlines_before = args.run_all_deadlines_before
-    if run_all_deadlines_before:
+    run_all = args.run_all
+    if run_all:
         print('Check and build with all deadline dates.\n')
         print('Checking all messages by reactions...')
         # 지금 파라미터로 들어온 deadline 이전 날짜에 대해 모두 돌리기
