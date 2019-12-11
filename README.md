@@ -1,7 +1,6 @@
 # Genie: 글또의 자동화 요정, 지니 프로젝트
 ## 글또란?
 - 개발블로그를 꾸준히 키우고 싶은 개발자들이 자발적으로 모여, 한 달에 두 번씩 글을 쓰는 (강제) 글쓰기 모임
-
 <br>
 
 ### 글또 글 제출 / 패스권 사용 / 상호 피드백 규칙
@@ -17,14 +16,12 @@
 - **기한** : 마감일 자정 (매달 둘째 주, 넷째 주 일요일 밤)
 - **피드백 대상** : 매 마감별로 나한테 지정된 리뷰어 2명 (같은 팀 내 1명, 다른 팀 2명)
 - **방법** : 내가 피드백 해야하는 리뷰어가 **저번 마감** 때 작성했던 글을 읽고 글이 제출되었던 메세지에 스레드로 피드백 내용 달아준 후 셀프로 `feedback` 리액션 달기
-
 <br>
 <br>
 
 ## 지니 프로젝트란?
 - 글또 슬랙 데이터를 수집해서 각 멤버가 마감 내에 글을 제출했는지 체킹하는 과정을 자동화하기 위한 프로젝트
 - 2019년 하반기 현재, 글또 3기에서는 **글 제출 + 상호 피드백** 체킹을 자동화하여 사용하고 있습니다.
-
 <br>
 
 ### 기본 아이디어
@@ -36,7 +33,6 @@
 3. 필터링 된 데이터에 대해 `url`, `제출 시각`, `pass권 사용 여부`, `타 멤버 글 피드백 여부` 등으로 데이터 전처리
 4. 전처리 된 데이터를 BigQuery에 전송 및 적재
 5. BigQuery에서 글또 마감 현황 스프레드시트로 동기화
-
 <br>
 
 ### 데이터 필터링 로직
@@ -56,7 +52,6 @@
 3) 3차 필터링 - 리뷰어 체크 : 피드백을 이번 마감에 지정되어있던 사람에게 한 게 맞는지 확인
 - 위 필터링을 모두 만족하면 해야 하는 대상에게 제대로 피드백을 남긴 게 맞으므로, `feedback=True`, `reviewer={멤버이름}` 으로 데이터 저장
 - 만약 피드백을 해야하는 대상이 저번 마감에 글을 제출하지 않았거나 pass권을 사용했다면 피드백을 할 필요 없으므로, `feedback=True`, `reviewer=-1` 으로 데이터 저장
-
 <br>
 <br>
 
@@ -74,7 +69,6 @@ genie
 └── tests : 테스트 코드
     └── README.md : pytest 관련 자료 모음
 ```
-
 <br>
 
 ### Install Environment
@@ -83,7 +77,6 @@ virtualenv env
 source env/bin/activate
 pip3 install -r requirements.txt
 ```
-
 <br>
 
 ### Slack Token 환경 변수 지정
@@ -92,7 +85,6 @@ pip3 install -r requirements.txt
     ```
     export SLACK_TOKEN='your_token'    
     ```
-
 <br>
 
 ### Run
@@ -108,12 +100,10 @@ python main.py --channel_prefix 3_
   - `gbq_phase` : 실행시키는 용도 ('development' 또는 'production'으로 입력)
   - `deadline` : 현재 제출의 마감 기한 (year-month-day 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)
   - `run_all` : True - 모든 deadline에 대해 체크 / False - 이번 deadline에 대해서만 체크
-
 <br>
 
 ### Crontab
 - To Be Update
-
 <br>
 
 ### Reference
