@@ -62,12 +62,13 @@
 genie
 ├── config : 설정 관련 데이터
 ├── outputs : slack에서 가져온 데이터 저장
-├── notebooks : 테스트용 노트북 저장 폴더
-├── main.py : 메인 실행 스크립트
-├── slack_export.py : slack 데이터 추출 스크립트
-├── checker.py : slack message에서 글 제출 확인 로직
-├── extract_data.py : bigquery 및 json data 처리
+├── common
+│   ├── main.py : 메인 실행 스크립트
+│   ├── slack_export.py : slack 데이터 추출 스크립트
+│   ├── checker.py : slack message에서 글 제출 확인 로직
+│   └── extract_data.py : bigquery 및 json data 처리
 └── tests : 테스트 코드
+    ├── test_checker.py : test case 실행
     └── README.md : pytest 관련 자료 모음
 ```
 
@@ -86,10 +87,10 @@ pip3 install -r requirements.txt
     ```
 
 ### Run
-#### \# `main.py` 실행
+#### \# `common/main.py` 실행
 
 ```
-python main.py --channel_prefix 3_
+python common/main.py --channel_prefix 3_
                --gbq_phase production
                --deadline 2019-07-22
                --run_all False
