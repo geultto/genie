@@ -14,8 +14,8 @@
 
 #### 3.  상호 피드백
 - **기한** : 마감일 자정 (매달 둘째 주, 넷째 주 일요일 밤)
-- **피드백 대상** : 매 마감별로 나한테 지정된 리뷰어 2명 (같은 팀 내 1명, 다른 팀 2명)
-- **방법** : 내가 피드백 해야하는 리뷰어가 **저번 마감** 때 작성했던 글을 읽고 글이 제출되었던 메세지에 스레드로 피드백 내용 달아준 후 셀프로 `feedback` 리액션 달기
+- **피드백 대상** : 매 마감별로 나한테 지정된 리뷰어 2명 (같은 팀 내 1명, 다른 팀 1명)
+- **방법** : 내가 피드백 해야하는 리뷰어가 **저번 마감** 때 작성했던 글을 읽고, 글이 제출되었던 메세지에 스레드로 피드백 내용 달아준 후 셀프로 `feedback` 리액션 달기
 <br>
 <br>
 
@@ -42,16 +42,16 @@
 - 위 필터링을 모두 만족하면 마감 내에 정상 제출된 메세지이므로, 메세지 내에서 `url`, `time`, `message_id` 등의 데이터 저장
 
 #### 2. 패스권 사용 체크
-- **1차 필터링 - deadline** : `check_deadline` 함수로 "저번 마감일 12am ~ 이번 마감일 12am" 사이에 속하는 메세지 골라내기
-- **2차 필터링 - self reaction** : `self_reaction_check` 함수로 self `pass` reaction이 달린 메세지인지 확인
+- **1차 필터링 - deadline** : "저번 마감일 12am ~ 이번 마감일 12am" 사이에 속하는 메세지 골라내기
+- **2차 필터링 - self reaction** : self `pass` reaction이 달린 메세지인지 확인
 - 위 필터링을 만족하면 마감 내에 정상적으로 패스권이 사용된 메세지이므로, `pass=True` 값 저장
 
 #### 3. 상호 피드백 체크
-- **1차 필터링 - 피드백 deadline** : `check_deadline` 함수로 "저번 마감일 12am ~ 이번 마감일 12am" 사이에 속하는 메세지 골라내기
+- **1차 필터링 - 피드백 deadline** : "저번 마감일 12am ~ 이번 마감일 12am" 사이에 속하는 메세지 골라내기
 - **2차 필터링 - 원글 deadline** : 피드백은 글을 제출한 메세지에 달린 스레드이므로, 스레드의 원 글(parent) 메세지가 저번 마감에 쓰인 글인지 확인
 - **3차 필터링 - 리뷰어** : 피드백을 이번 마감에 지정되어있던 사람에게 한 게 맞는지 확인
-- 위 필터링을 모두 만족하면 해야 하는 대상에게 제대로 피드백을 남긴 게 맞으므로, `feedback=True`, `reviewer={멤버이름}` 으로 데이터 저장
-- 만약 피드백을 해야하는 대상이 저번 마감에 글을 제출하지 않았거나 pass권을 사용했다면 피드백을 할 필요 없으므로, `feedback=True`, `reviewer=-1` 으로 데이터 저장
+- 위 필터링을 모두 만족하면 피드백 해야 하는 대상에게 제대로 한 것이므로, `feedback=True`, `reviewer={이름}` 으로 데이터 저장
+- 만약 피드백을 해야하는 대상이 저번 마감에 글을 제출하지 않았거나 pass권을 사용했다면 피드백 할 필요가 없으므로, `feedback=True`, `reviewer=-1` 으로 데이터 저장
 <br>
 <br>
 
@@ -69,7 +69,6 @@ genie
 └── tests : 테스트 코드
     └── README.md : pytest 관련 자료 모음
 ```
-<br>
 
 ### Install Environment
 ```
@@ -77,7 +76,6 @@ virtualenv env
 source env/bin/activate
 pip3 install -r requirements.txt
 ```
-<br>
 
 ### Slack Token 환경 변수 지정
 - Terminal에서
@@ -85,7 +83,6 @@ pip3 install -r requirements.txt
     ```
     export SLACK_TOKEN='your_token'    
     ```
-<br>
 
 ### Run
 #### \# `main.py` 실행
@@ -100,11 +97,9 @@ python main.py --channel_prefix 3_
   - `gbq_phase` : 실행시키는 용도 ('development' 또는 'production'으로 입력)
   - `deadline` : 현재 제출의 마감 기한 (year-month-day 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)
   - `run_all` : True - 모든 deadline에 대해 체크 / False - 이번 deadline에 대해서만 체크
-<br>
 
 ### Crontab
 - To Be Update
-<br>
 
 ### Reference
-- [slack_export Github](https://github.com/zach-snell/slack-export)
+- 슬랙 데이터 추출 : [slack_export](https://github.com/zach-snell/slack-export)
