@@ -94,13 +94,15 @@ python main.py --channel_prefix 3_
                --deadline 2019-07-22
                --run_all False
 ```
-  - **`channel_prefix`** : 추출하기 원하는 채널의 접두사 (ex. '`1_`', '`2_`' 등)
-  - **`gbq_phase`** : 실행시키는 용도 ('`development`' 또는 '`production`'으로 입력)
+  - **`channel_prefix`** : 추출하기 원하는 채널의 접두사 (ex. `1_`, `2_` 등)
+  - **`gbq_phase`** : 실행시키는 용도 (`development` 또는 `production`으로 입력)
   - **`deadline`** : 현재 제출의 마감 기한 (`yyyy-mm-dd` 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)
   - **`run_all`** : `True` - 모든 deadline에 대해 체크 / `False` - 이번 deadline에 대해서만 체크
 
 ### Crontab
 - To Be Update
+<br>
+<br>
 
-### Reference
+## Reference
 - 슬랙 데이터 추출 : [slack_export](https://github.com/zach-snell/slack-export)
