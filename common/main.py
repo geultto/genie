@@ -1,11 +1,10 @@
-import argparse, time
+import argparse, time, sys
 from slacker import Slacker
 import pandas as pd
 from slack_export import *
 from utils import bigquery_config, root_path
 from checker import all_message_check
-from extract_data import get_status_data, get_deadline_data, get_peer_reviewer_data, send_data_to_gbq
-from extract_data import get_all_slack_log, get_all_status_board, get_all_users, get_all_messages
+from extract_data import *
 
 if __name__ == "__main__":
     # ---------------------------- save raw data from slack ---------------------------- #
@@ -22,6 +21,8 @@ if __name__ == "__main__":
     parser.add_argument('--data_dir',  default=False, help='data dir to get all messages')
     parser.add_argument('--dump_id_files', action='store_true', default=False, help="restore user/channnel ids")
     parser.add_argument('--public_channels', nargs='*', default=None, metavar='CHANNEL_NAME', help="Export the given Public Channels")
+    parser.add_argument('--prompt', action='store_true', default=False, help="Prompt you to select the conversations to export")
+    parser.add_argument('--only_save', default=False, help="Run code for only saving data from slack")
 
 
     args = parser.parse_args()
@@ -29,10 +30,11 @@ if __name__ == "__main__":
     dump_id_files = args.dump_id_files
     zip_name = args.zip
     users, channels = bootstrap_key_values(slack, dry_run)
+    abs_output_directory = os.path.join(root_path, '../outputs')
 
     if not args.data_dir:
-        output_directory = "outputs/{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
-        abs_output_directory = os.path.join(root_path, 'outputs')
+        dir_name = "{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
+        output_directory = os.path.join(abs_output_directory, dir_name)
         abs_slack_export_directory = os.path.join(root_path, output_directory)
 
         mkdir(output_directory)
@@ -57,10 +59,12 @@ if __name__ == "__main__":
         finalize(zip_name, output_directory)
 
     else:
-        output_directory = "outputs/{}".format(args.data_dir)
-        abs_output_directory = os.path.join(root_path, 'outputs')
+        output_directory = os.path.join(abs_output_directory, args.data_dir)
         abs_slack_export_directory = os.path.join(root_path, output_directory)
         os.chdir(output_directory)
+
+    if args.only_save:
+        sys.exit()
 
 
     # ---------------------------- Parameters for BigQuery ---------------------------- #

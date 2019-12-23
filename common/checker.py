@@ -81,18 +81,23 @@ def check_deadline(deadline, time, all_deadline_dates, d_type, thread_ts=None):
 def message_check(message, dataz, users, peer_reviewers, submit_num, all_slack_log, check_reaction):
     time = str(datetime.fromtimestamp(float(message['ts'])))[:-7]
     if check_reaction == 'submit':
-        if (('attachments' in message.keys()) or ('<https://' in message['text'])) and ('reactions' in message.keys()):
+        if (('attachments' in message.keys()) or ('https://' in message['text'])) and ('reactions' in message.keys()):
             if self_reaction_check(check_reaction, message):
                 message_id = message['client_msg_id']
                 user_id = message['user']
                 if ('attachments' in message.keys()) and ('title_link' in message['attachments'][0].keys()):
                     link = message['attachments'][0]['title_link']
                 # naver blog의 경우 attachments로 생성 안되어 regex로 잡기
-                elif '<https://' in message['text']:
+                elif 'https://' in message['text']:
                     message_text = message['text']
                     pattern = re.compile('<https://.+?>')
                     link = pattern.search(message_text)
-                    link = link.group()[1:-1]
+                    if not link:
+                        pattern = re.compile('https://.+?&')
+                        link = pattern.search(message_text)
+                        link = link.group()[:-1]
+                    else:
+                        link = link.group()[1:-1]
                 else:
                     link = 'Link: Submitted but not Found, check required.'
                 dataz.loc[dataz['user_id'] == user_id, 'url'] = link
