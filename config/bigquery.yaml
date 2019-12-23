@@ -1,9 +1,0 @@
-development:
-  project: geultto
-  jwt: geultto-genie-46d7f46b7ca2.json
-  suffix: staging
-
-production:
-  project: geultto
-  jwt: geultto-genie-46d7f46b7ca2.json
-  suffix : prod
