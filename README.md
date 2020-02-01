@@ -64,12 +64,15 @@ genie
 ├── config : 빅쿼리 설정 관련 데이터
 │   ├── bigquery.yaml : 빅쿼리 관련 파라미터
 │   └── geultto-genie-***.json : 빅쿼리 접근 private key 정보 (빅쿼리에서 다운로드)
+│
 ├── outputs : slack에서 가져온 데이터 저장
+│
 ├── common
 │   ├── main.py : 메인 실행 스크립트
 │   ├── slack_export.py : slack 데이터 추출 스크립트
 │   ├── checker.py : slack message에서 글 제출 확인 로직
 │   └── extract_data.py : bigquery 및 json data 처리
+│
 └── tests : 테스트 코드
     ├── test_checker.py : test case 실행
     └── README.md : pytest 관련 자료 모음
@@ -95,7 +98,9 @@ pip3 install -r requirements.txt
 ```
 python common/main.py --deadline 2020-02-16
 ```
-  - **`deadline`** : 현재 제출의 마감 기한 (`yyyy-mm-dd` 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)
+  - **`deadline`** : 현재 제출의 마감 기한 (`yyyy-mm-dd` 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)    
+
+
 **다른 Arguments:**
   - **`channel_prefix`** : 추출하기 원하는 채널의 접두사 (ex. `1_`, `2_` 등)
   - **`gbq_phase`** : 실행시키는 용도 (`development` 또는 `production`으로 입력)
