@@ -7,8 +7,6 @@ from checker import all_message_check
 from extract_data import *
 
 if __name__ == "__main__":
-    # ---------------------------- save raw data from slack ---------------------------- #
-    # It will generate data files in output Directory
     slack_token = os.getenv('SLACK_TOKEN')
     parser = argparse.ArgumentParser(description='Export Slack history')
 
@@ -18,14 +16,16 @@ if __name__ == "__main__":
     parser.add_argument('--gbq_phase', default='production', help='BigQuery dealing phase: development / production')
     parser.add_argument('--run_all', default=False, help='run all deadlines before / run only this submission')
     parser.add_argument('--deadline', required=True, help='deadline date (Monday): yyyy-mm-dd')
-    parser.add_argument('--data_dir',  default=False, help='data dir to get all messages')
+    parser.add_argument('--data_dir',  default=False, help='True: data dir name (use previous messages) / False: save in new dir')
     parser.add_argument('--dump_id_files', action='store_true', default=False, help="restore user/channnel ids")
     parser.add_argument('--public_channels', nargs='*', default=None, metavar='CHANNEL_NAME', help="Export the given Public Channels")
     parser.add_argument('--prompt', action='store_true', default=False, help="Prompt you to select the conversations to export")
     parser.add_argument('--only_save', default=False, help="Run code for only saving data from slack")
 
-
     args = parser.parse_args()
+
+    # ------------------------------- save raw data from slack ------------------------------- #
+    # It will generate data files in output Directory
     slack = Slacker(args.token)
     dump_id_files = args.dump_id_files
     zip_name = args.zip
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         sys.exit()
 
 
-    # ---------------------------- Parameters for BigQuery ---------------------------- #
+    # -------------------------------- Parameters for BigQuery -------------------------------- #
     phase = args.gbq_phase
     project_id = bigquery_config[phase]['project']            # geultto
     if phase == 'production':
@@ -117,8 +117,10 @@ if __name__ == "__main__":
 
 
     # ---------------------------- submit / pass / feedback check ---------------------------- #
-    # ------------------- save data as pandas DataFrame & send to BigQuery ------------------- #
+    # ----------------- and save data as pandas DataFrame & send to BigQuery ----------------- #
     run_all = args.run_all
+
+    # check all data submitted from start
     if run_all:
         print('Check and build with all deadline dates.\n')
         print('Checking all messages by reactions...')
@@ -147,7 +149,7 @@ if __name__ == "__main__":
             time.sleep(10)
         print('\nSuccesfully All sent.')
 
-    # run only this submission
+    # check with data submitted whitin only this submission
     else:
         print('Check and build data by only this submission. \nAppending data at the end of table made before.\n')
         print('Checking all messages by reactions...')

@@ -61,7 +61,9 @@
 ### Architecture
 ```
 genie
-├── config : 설정 관련 데이터
+├── config : 빅쿼리 설정 관련 데이터
+│   ├── bigquery.yaml : 빅쿼리 관련 파라미터
+│   └── geultto-genie-***.json : 빅쿼리 접근 private key 정보 (빅쿼리에서 다운로드)
 ├── outputs : slack에서 가져온 데이터 저장
 ├── common
 │   ├── main.py : 메인 실행 스크립트
