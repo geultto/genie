@@ -93,14 +93,12 @@ pip3 install -r requirements.txt
 #### \# `common/main.py` 실행
 
 ```
-python common/main.py --channel_prefix 3_
-               --gbq_phase production
-               --deadline 2019-07-22
-               --run_all False
+python common/main.py --deadline 2020-02-16
 ```
+  - **`deadline`** : 현재 제출의 마감 기한 (`yyyy-mm-dd` 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)
+**다른 Arguments:**
   - **`channel_prefix`** : 추출하기 원하는 채널의 접두사 (ex. `1_`, `2_` 등)
   - **`gbq_phase`** : 실행시키는 용도 (`development` 또는 `production`으로 입력)
-  - **`deadline`** : 현재 제출의 마감 기한 (`yyyy-mm-dd` 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)
   - **`run_all`** : `True` - 모든 deadline에 대해 체크 / `False` - 이번 deadline에 대해서만 체크
 
 ### Crontab
