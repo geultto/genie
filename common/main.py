@@ -1,15 +1,12 @@
-import argparse, time
+import argparse, time, sys
 from slacker import Slacker
 import pandas as pd
 from slack_export import *
 from utils import bigquery_config, root_path
 from checker import all_message_check
-from extract_data import get_status_data, get_deadline_data, get_peer_reviewer_data, send_data_to_gbq
-from extract_data import get_all_slack_log, get_all_status_board, get_all_users, get_all_messages
+from extract_data import *
 
 if __name__ == "__main__":
-    # ---------------------------- save raw data from slack ---------------------------- #
-    # It will generate data files in output Directory
     slack_token = os.getenv('SLACK_TOKEN')
     parser = argparse.ArgumentParser(description='Export Slack history')
 
@@ -19,20 +16,25 @@ if __name__ == "__main__":
     parser.add_argument('--gbq_phase', default='production', help='BigQuery dealing phase: development / production')
     parser.add_argument('--run_all', default=False, help='run all deadlines before / run only this submission')
     parser.add_argument('--deadline', required=True, help='deadline date (Monday): yyyy-mm-dd')
-    parser.add_argument('--data_dir',  default=False, help='data dir to get all messages')
+    parser.add_argument('--data_dir',  default=False, help='True: data dir name (use previous messages) / False: save in new dir')
     parser.add_argument('--dump_id_files', action='store_true', default=False, help="restore user/channnel ids")
     parser.add_argument('--public_channels', nargs='*', default=None, metavar='CHANNEL_NAME', help="Export the given Public Channels")
-
+    parser.add_argument('--prompt', action='store_true', default=False, help="Prompt you to select the conversations to export")
+    parser.add_argument('--only_save', default=False, help="Run code for only saving data from slack")
 
     args = parser.parse_args()
+
+    # ------------------------------- save raw data from slack ------------------------------- #
+    # It will generate data files in output Directory
     slack = Slacker(args.token)
     dump_id_files = args.dump_id_files
     zip_name = args.zip
     users, channels = bootstrap_key_values(slack, dry_run)
+    abs_output_directory = os.path.join(root_path, '../outputs')
 
     if not args.data_dir:
-        output_directory = "outputs/{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
-        abs_output_directory = os.path.join(root_path, 'outputs')
+        dir_name = "{0}-slack_export".format(datetime.today().strftime("%Y%m%d-%H%M%S"))
+        output_directory = os.path.join(abs_output_directory, dir_name)
         abs_slack_export_directory = os.path.join(root_path, output_directory)
 
         mkdir(output_directory)
@@ -57,13 +59,15 @@ if __name__ == "__main__":
         finalize(zip_name, output_directory)
 
     else:
-        output_directory = "outputs/{}".format(args.data_dir)
-        abs_output_directory = os.path.join(root_path, 'outputs')
+        output_directory = os.path.join(abs_output_directory, args.data_dir)
         abs_slack_export_directory = os.path.join(root_path, output_directory)
         os.chdir(output_directory)
 
+    if args.only_save:
+        sys.exit()
 
-    # ---------------------------- Parameters for BigQuery ---------------------------- #
+
+    # -------------------------------- Parameters for BigQuery -------------------------------- #
     phase = args.gbq_phase
     project_id = bigquery_config[phase]['project']            # geultto
     if phase == 'production':
@@ -113,8 +117,10 @@ if __name__ == "__main__":
 
 
     # ---------------------------- submit / pass / feedback check ---------------------------- #
-    # ------------------- save data as pandas DataFrame & send to BigQuery ------------------- #
+    # ----------------- and save data as pandas DataFrame & send to BigQuery ----------------- #
     run_all = args.run_all
+
+    # check all data submitted from start
     if run_all:
         print('Check and build with all deadline dates.\n')
         print('Checking all messages by reactions...')
@@ -143,7 +149,7 @@ if __name__ == "__main__":
             time.sleep(10)
         print('\nSuccesfully All sent.')
 
-    # run only this submission
+    # check with data submitted whitin only this submission
     else:
         print('Check and build data by only this submission. \nAppending data at the end of table made before.\n')
         print('Checking all messages by reactions...')
