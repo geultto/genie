@@ -77,23 +77,38 @@ genie
     ├── test_checker.py : test case 실행
     └── README.md : pytest 관련 자료 모음
 ```
+<br>
+<br>
 
-### Install Environment
+## Usage
+### 1. Install Environment
 ```
 virtualenv env
 source env/bin/activate
 pip3 install -r requirements.txt
 ```
 
-### Slack Token 환경 변수 지정
-- Terminal에서
+### 2. Slack Token 환경 변수 지정
+- 해당 슬랙 workspace의 API를 접근할 수 있는 토큰을 받아와야 합니다.      
+- [이곳](https://api.slack.com/legacy/custom-integrations/legacy-tokens)에서 슬랙 토큰을 생성받은 후 Terminal에서 다음과 같이 변수를 설정해줍니다.
+- (`.bash_profile`, `.zshrc` 등의 파일에서 설정)     
 
     ```
     export SLACK_TOKEN='your_token'    
     ```
 
-### Run
-#### \# `common/main.py` 실행
+### 3. `deadline`, `users` 데이터 저장
+- `outputs` 디렉토리 밑에 다음과 같이 유저 데이터와 데드라인 날짜 데이터를 저장해주세요.
+- 코드가 실행될 때 유저 데이터와 데드라인 날짜 데이터를 활용됩니다.
+```
+genie
+└── outputs
+    ├── deadline_dates.csv
+    └── users.json
+```
+
+### 4. Run
+- 다음과 같이 실행시킬 수 있습니다.
 
 ```
 python common/main.py --deadline 2020-02-16
