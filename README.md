@@ -81,6 +81,7 @@ genie
 
 ## Usage
 ### 1. Install Environment
+- 실행에 필요한 requirements를 설치해주세요.
 ```
 virtualenv env
 source env/bin/activate
@@ -96,7 +97,7 @@ export SLACK_TOKEN='xoxo-your-token'
 ```
 
 ### 3. 마감 날짜 데이터, 유저 데이터 저장
-- 다음과 같이 `outputs` 디렉토리 아래에 코드 실행 시 활용되는 유저 데이터와 마감 날짜 데이터를 저장해주세요.
+- 코드 실행 시 활용되는 유저 데이터와 마감 날짜 데이터를 다음과 같이 `outputs` 디렉토리 아래에 저장해주세요.
 ```
 genie
 └── outputs
