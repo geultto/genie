@@ -96,6 +96,7 @@ pip3 install -r requirements.txt
 export SLACK_TOKEN='xoxo-your-token'    
 ```
 
+
 ### 3. 마감 날짜 데이터, 유저 데이터 저장
 - 코드 실행 시 활용되는 유저 데이터와 마감 날짜 데이터를 다음과 같이 `outputs` 디렉토리 아래에 저장해주세요.
 ```
@@ -112,7 +113,7 @@ python common/main.py --deadline 2020-02-16
 ```
   - **`deadline`** : 현재 제출의 마감 기한 (`yyyy-mm-dd` 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)    
 
-
+  
 **- 다른 Arguments:**
   - **`channel_prefix`** : 추출하기 원하는 채널의 접두사 (ex. `1_`, `2_` 등)
   - **`gbq_phase`** : 실행시키는 용도 (`development` 또는 `production`으로 입력)
