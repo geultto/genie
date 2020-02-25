@@ -14,3 +14,12 @@ bigquery_config = yaml.load(
 
 
 __all__ = ['phase', 'root_path', 'bigquery_config']
+
+
+# CARDINAL_NUM
+CARDINAL_NUM = 4
+
+if CARDINAL_NUM == 3:
+    cardinal = "3rd"
+else:
+    cardinal = str(CARDINAL_NUM) + "th"

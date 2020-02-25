@@ -57,8 +57,7 @@
 <br>
 <br>
 
-## Code Details
-### Architecture
+## Code Architecture
 ```
 genie
 ├── config : 빅쿼리 설정 관련 데이터
@@ -77,36 +76,52 @@ genie
     ├── test_checker.py : test case 실행
     └── README.md : pytest 관련 자료 모음
 ```
+<br>
+<br>
 
-### Install Environment
+## Usage
+### 1. Install Environment
+- 실행에 필요한 requirements를 설치해주세요.
 ```
 virtualenv env
 source env/bin/activate
 pip3 install -r requirements.txt
 ```
 
-### Slack Token 환경 변수 지정
-- Terminal에서
+### 2. Slack Token 환경 변수 지정
+- 해당 슬랙 workspace의 API를 접근할 수 있는 토큰을 받아와야 합니다.      
+- [이곳](https://api.slack.com/legacy/custom-integrations/legacy-tokens)에서 슬랙 토큰을 생성받습니다.
+- 생성 받은 토큰을 `.bash_profile`, `.zshrc` 등의 파일에 다음과 같이 환경 변수로 저장해줍니다.
+```
+export SLACK_TOKEN='xoxo-your-token'    
+```
 
-    ```
-    export SLACK_TOKEN='your_token'    
-    ```
 
-### Run
-#### \# `common/main.py` 실행
+### 3. 마감 날짜 데이터, 유저 데이터 저장
+- 코드 실행 시 활용되는 유저 데이터와 마감 날짜 데이터를 다음과 같이 `outputs` 디렉토리 아래에 저장해주세요.
+```
+genie
+└── outputs
+    ├── deadline_dates.csv
+    └── users.json
+```
+
+### 4. Run
 
 ```
 python common/main.py --deadline 2020-02-16
 ```
   - **`deadline`** : 현재 제출의 마감 기한 (`yyyy-mm-dd` 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)    
 
-
-**다른 Arguments:**
+  
+**- 다른 Arguments:**
   - **`channel_prefix`** : 추출하기 원하는 채널의 접두사 (ex. `1_`, `2_` 등)
   - **`gbq_phase`** : 실행시키는 용도 (`development` 또는 `production`으로 입력)
   - **`run_all`** : `True` - 모든 deadline에 대해 체크 / `False` - 이번 deadline에 대해서만 체크
+<br>
+<br>
 
-### Crontab
+## Crontab
 - To Be Update
 <br>
 <br>

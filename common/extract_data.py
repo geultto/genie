@@ -1,11 +1,12 @@
 import os, json
 import pandas as pd
 from datetime import datetime, timedelta
-from utils import bigquery_config, phase, root_path
+from utils import bigquery_config, phase, root_path, cardinal
 
 _project_id = bigquery_config[phase]['project']
 _suffix = bigquery_config[phase]['suffix']
 _jwt = os.path.join(root_path, 'config', bigquery_config[phase]['jwt'])
+
 
 
 def get_deadline_data(abs_output_directory):
@@ -13,18 +14,8 @@ def get_deadline_data(abs_output_directory):
     feedback 위해 글또 3기의 제출 마감 날짜 목록 추출
     :return: dataframe, 데드라인의 날짜가 모두 저장된 데이터프레임
     """
-    query = f'''
-    select date
-    from `geultto.peer_reviewer.3rd_{_suffix}`
-    group by date
-    '''
-    all_deadline_dates_df = pd.read_gbq(query, project_id=_project_id, dialect='standard', private_key=_jwt)
-    all_deadline_dates_df['date'] = all_deadline_dates_df['date'].apply(lambda i: i.replace('.', '-'))
-    deadline_dates_json = all_deadline_dates_df.to_dict()
-    all_deadline_dates_df['date'] = all_deadline_dates_df['date'].apply(lambda i: datetime.strptime(i, '%Y-%m-%d'))
-    # deadline dates를 json file 형태로 저장
-    with open(os.path.join(abs_output_directory, 'deadline_dates.json'), 'w') as out_file:
-        json.dump(deadline_dates_json, out_file, indent=4)
+    all_deadline_dates_df = pd.read_csv(os.path.join(abs_output_directory, "deadline_dates.csv"))
+    all_deadline_dates_df["date"] = all_deadline_dates_df["date"].apply(lambda i: datetime.strptime(i, '%Y-%m-%d'))
     return all_deadline_dates_df
 
 
@@ -50,7 +41,7 @@ def get_all_slack_log():
     """
     query = f'''
     select *
-    from `geultto.slack_log.3rd_prod`
+    from `geultto.slack_log.{cardinal}_prod`
     '''
     slack_log_df = pd.read_gbq(query, project_id=_project_id, dialect='standard', private_key=_jwt)
     return slack_log_df
@@ -63,7 +54,7 @@ def get_all_status_board():
     """
     query = f'''
     select *
-    from `geultto.status_board.3rd_prod`
+    from `geultto.status_board.{cardinal}_prod`
     '''
     status_board_df = pd.read_gbq(query, project_id=_project_id, dialect='standard', private_key=_jwt)
     return status_board_df
@@ -76,7 +67,7 @@ def get_status_data():
     """
     query = f'''
     select name, team, submit_num, same_team_reviewer, other_team_reviewer, time, url, timestamp
-    from `geultto.slack_log.3rd_{_suffix}` as l left outer join `geultto.user_db.team_member` as r
+    from `geultto.slack_log.{cardinal}_{_suffix}` as l left outer join `geultto.user_db.team_member` as r
     on l.user_id = r.id
     where name IS NOT NULL
     group by name, team, submit_num, time, timestamp, url, same_team_reviewer, other_team_reviewer

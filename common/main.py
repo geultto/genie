@@ -7,10 +7,11 @@ from checker import all_message_check
 from extract_data import *
 
 if __name__ == "__main__":
-    slack_token = os.getenv('SLACK_TOKEN')
-    parser = argparse.ArgumentParser(description='Export Slack history')
+    SLACK_TOKEN = os.getenv('SLACK_TOKEN')
 
-    parser.add_argument('--token', default=slack_token, help="Slack API token")
+    parser = argparse.ArgumentParser(description='Export Slack history')
+    parser.add_argument('--token', default=SLACK_TOKEN, help="Slack API token")
+    parser.add_argument('--CARDINAL_NUM', default=4, help="geultto Cardinal Number")
     parser.add_argument('--zip', help="Name of a zip file to outputs as")
     parser.add_argument('--channel_prefix', default='3_', help="prefix of channel which need to be exported")
     parser.add_argument('--gbq_phase', default='production', help='BigQuery dealing phase: development / production')
@@ -69,18 +70,25 @@ if __name__ == "__main__":
 
     # -------------------------------- Parameters for BigQuery -------------------------------- #
     phase = args.gbq_phase
+
+    # CARDINAL_NUM
+    if args.CARDINAL_NUM == 3:
+        cardinal = "3rd"
+    else:
+        cardinal = str(args.CARDINAL_NUM) + "th"
+
     project_id = bigquery_config[phase]['project']            # geultto
     if phase == 'production':
         prod_table_suffix = bigquery_config[phase]['suffix']           # prod
-        prod_log_table_id = 'slack_log.3rd_{}'.format(prod_table_suffix)
-        prod_status_table_id = 'status_board.3rd_{}'.format(prod_table_suffix)
+        prod_log_table_id = 'slack_log.{}_{}'.format(cardinal, prod_table_suffix)
+        prod_status_table_id = 'status_board.{}_{}'.format(cardinal, prod_table_suffix)
     else:
         prod_table_suffix = None
         prod_log_table_id = None
         prod_status_table_id = None
     table_suffix = bigquery_config['development']['suffix']           # staging
-    log_table_id = 'slack_log.3rd_{}'.format(table_suffix)
-    status_table_id = 'status_board.3rd_{}'.format(table_suffix)
+    log_table_id = 'slack_log.{}_{}'.format(cardinal, table_suffix)
+    status_table_id = 'status_board.{}_{}'.format(cardinal, table_suffix)
 
 
     print('Getting data from BigQuery...')
