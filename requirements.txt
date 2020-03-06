@@ -1,3 +1,4 @@
 slacker
 pandas
 pick
+pyyaml
