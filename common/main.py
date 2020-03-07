@@ -149,7 +149,7 @@ if __name__ == "__main__":
                 if_exists_prod = 'replace'
             else:
                 if_exists_prod = 'append'
-            send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, \
+            send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id,
                              prod_log_table_id, prod_status_table_id, if_exists_prod)
             print('Sent.'.format(num + 1, submit_num))
             time.sleep(10)
@@ -174,7 +174,7 @@ if __name__ == "__main__":
             if_exists_prod = 'append'
         else:
             if_exists_prod = 'replace'
-        send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, \
+        send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id,
                          prod_log_table_id, prod_status_table_id, if_exists_prod)
 
         print('Successfully All sent.')
