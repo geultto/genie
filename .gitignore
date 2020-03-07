@@ -14,7 +14,7 @@ __pycache__/
 .DS_store
 outputs*/
 notebooks/
-config/
+config/*.json
 
 # C extensions
 *.so
