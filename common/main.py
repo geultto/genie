@@ -1,6 +1,5 @@
 import argparse, time, sys
 from slacker import Slacker
-import pandas as pd
 from slack_export import *
 from utils import bigquery_config, root_path
 from checker import all_message_check
