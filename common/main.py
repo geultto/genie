@@ -154,9 +154,9 @@ if __name__ == "__main__":
                              prod_log_table_id, prod_status_table_id, if_exists_prod)
             print('Sent.'.format(num+1, submit_num))
             time.sleep(10)
-        print('\nSuccesfully All sent.')
+        print('\nSuccessfully All sent.')
 
-    # check with data submitted whitin only this submission
+    # check with data submitted within only this submission
     else:
         print('Check and build data by only this submission. \nAppending data at the end of table made before.\n')
         print('Checking all messages by reactions...')
@@ -178,4 +178,4 @@ if __name__ == "__main__":
         send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, \
                          prod_log_table_id, prod_status_table_id, if_exists_prod)
 
-        print('Succesfully All sent.')
+        print('Successfully All sent.')
