@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser.add_argument('--CARDINAL_NUM', default=4, help="geultto Cardinal Number")
     parser.add_argument('--zip', help="Name of a zip file to outputs as")
     parser.add_argument('--channel_prefix', default='3_', help="prefix of channel which need to be exported")
-    parser.add_argument('--gbq_phase', default='production', help='BigQuery dealing phase: development / production')
+    parser.add_argument('--gbq_phase', default='development', help='BigQuery dealing phase: development / production')
     parser.add_argument('--run_all', default=False, help='run all deadlines before / run only this submission')
     parser.add_argument('--deadline', required=True, help='deadline date (Monday): yyyy-mm-dd')
     parser.add_argument('--data_dir',  default=False, help='True: data dir name (use previous messages) / False: save in new dir')
