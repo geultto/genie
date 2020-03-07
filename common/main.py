@@ -16,10 +16,13 @@ if __name__ == "__main__":
     parser.add_argument('--gbq_phase', default='development', help='BigQuery dealing phase: development / production')
     parser.add_argument('--run_all', default=False, help='run all deadlines before / run only this submission')
     parser.add_argument('--deadline', required=True, help='deadline date (Monday): yyyy-mm-dd')
-    parser.add_argument('--data_dir',  default=False, help='True: data dir name (use previous messages) / False: save in new dir')
+    parser.add_argument('--data_dir', default=False,
+                        help='True: data dir name (use previous messages) / False: save in new dir')
     parser.add_argument('--dump_id_files', action='store_true', default=False, help="restore user/channnel ids")
-    parser.add_argument('--public_channels', nargs='*', default=None, metavar='CHANNEL_NAME', help="Export the given Public Channels")
-    parser.add_argument('--prompt', action='store_true', default=False, help="Prompt you to select the conversations to export")
+    parser.add_argument('--public_channels', nargs='*', default=None, metavar='CHANNEL_NAME',
+                        help="Export the given Public Channels")
+    parser.add_argument('--prompt', action='store_true', default=False,
+                        help="Prompt you to select the conversations to export")
     parser.add_argument('--only_save', default=False, help="Run code for only saving data from slack")
 
     args = parser.parse_args()
@@ -66,7 +69,6 @@ if __name__ == "__main__":
     if args.only_save:
         sys.exit()
 
-
     # -------------------------------- Parameters for BigQuery -------------------------------- #
     phase = args.gbq_phase
 
@@ -76,19 +78,18 @@ if __name__ == "__main__":
     else:
         cardinal = str(args.CARDINAL_NUM) + "th"
 
-    project_id = bigquery_config[phase]['project']            # geultto
+    project_id = bigquery_config[phase]['project']  # geultto
     if phase == 'production':
-        prod_table_suffix = bigquery_config[phase]['suffix']           # prod
+        prod_table_suffix = bigquery_config[phase]['suffix']  # prod
         prod_log_table_id = 'slack_log.{}_{}'.format(cardinal, prod_table_suffix)
         prod_status_table_id = 'status_board.{}_{}'.format(cardinal, prod_table_suffix)
     else:
         prod_table_suffix = None
         prod_log_table_id = None
         prod_status_table_id = None
-    table_suffix = bigquery_config['development']['suffix']           # staging
+    table_suffix = bigquery_config['development']['suffix']  # staging
     log_table_id = 'slack_log.{}_{}'.format(cardinal, table_suffix)
     status_table_id = 'status_board.{}_{}'.format(cardinal, table_suffix)
-
 
     print('Getting data from BigQuery...')
     all_deadline_dates = get_deadline_data(abs_output_directory)
@@ -107,7 +108,6 @@ if __name__ == "__main__":
     peer_reviewers = get_peer_reviewer_data()
     print('Done.\n')
 
-
     # ---------------------------- Get users url data by reactions ---------------------------- #
     print('Now collecting user messages...')
     # Get user data
@@ -122,7 +122,6 @@ if __name__ == "__main__":
 
     print('Done.\n')
 
-
     # ---------------------------- submit / pass / feedback check ---------------------------- #
     # ----------------- and save data as pandas DataFrame & send to BigQuery ----------------- #
     run_all = args.run_all
@@ -132,7 +131,7 @@ if __name__ == "__main__":
         print('Check and build with all deadline dates.\n')
         print('Checking all messages by reactions...')
         # 지금 파라미터로 들어온 deadline 이전 날짜에 대해 모두 돌리기
-        for num in range(submit_num+1):
+        for num in range(submit_num + 1):
             deadline = all_deadline_dates.loc[num]['date'].strftime('%Y-%m-%d')
             dataz = all_message_check(
                 users,
@@ -143,7 +142,7 @@ if __name__ == "__main__":
                 all_slack_log,
                 all_status_board,
                 all_messages)
-            print('{}/{} messages checked. Sending Data to BigQuery...'.format(num+1, submit_num+1))
+            print('{}/{} messages checked. Sending Data to BigQuery...'.format(num + 1, submit_num + 1))
 
             # 첫 번째 날짜는 replace로, 두 번째부터는 append로 돌리기
             if num == 0:
@@ -152,7 +151,7 @@ if __name__ == "__main__":
                 if_exists_prod = 'append'
             send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, \
                              prod_log_table_id, prod_status_table_id, if_exists_prod)
-            print('Sent.'.format(num+1, submit_num))
+            print('Sent.'.format(num + 1, submit_num))
             time.sleep(10)
         print('\nSuccessfully All sent.')
 
