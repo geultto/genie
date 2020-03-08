@@ -216,3 +216,17 @@ def finalize(zip_name, output_directory):
     if zip_name:
         shutil.make_archive(zip_name, 'zip', output_directory, None)
         shutil.rmtree(output_directory)
+
+
+def get_user_names_with_id(users):
+    users_with_id = []
+
+    for user in users:
+        if is_valid_user(user):
+            users_with_id.append({'name': user['real_name'], 'id': user['id']})
+
+    return users_with_id
+
+
+def is_valid_user(user):
+    return not user['is_bot'] and not user['deleted'] and user['real_name'] != 'Slackbot'
