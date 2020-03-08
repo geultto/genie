@@ -218,6 +218,21 @@ def finalize(zip_name, output_directory):
         shutil.rmtree(output_directory)
 
 
+def get_user_names_with_channel(channels, channel_prefix):
+    users_with_channel = []
+
+    for channel in channels:
+        channel_name = channel['name']
+
+        if channel_name.startswith(channel_prefix):
+            member_names = channel['topic']['value'].split()
+
+            for name in member_names:
+                users_with_channel.append({'name': name, 'channel_name': channel_name})
+
+    return users_with_channel
+
+
 def get_user_names_with_id(users):
     users_with_id = []
 
