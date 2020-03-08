@@ -4,11 +4,13 @@ import shutil
 from datetime import datetime
 from pick import pick
 from time import sleep
+from collections import defaultdict
 
 
 user_names_by_id = {}
 user_ids_by_name = {}
 dry_run = None
+user_name_key = 'user_name'
 
 
 def get_history(pageable_object, channel_id, page_size=100):
@@ -218,6 +220,27 @@ def finalize(zip_name, output_directory):
         shutil.rmtree(output_directory)
 
 
+# channel_prefix : prefix of the posting channel
+def get_user_table(channel_prefix):
+    users = slack.users.list().body['members']
+    channels = slack.channels.list().body['channels']
+
+    user_names_with_id = get_user_names_with_id(users)
+    user_names_with_channel = get_user_names_with_channel(channels, channel_prefix)
+
+    if len(user_names_with_id) == len(user_names_with_channel):
+        user_table = defaultdict(dict)
+
+        for merged_list in (user_names_with_id, user_names_with_channel):
+            for element in merged_list:
+                user_table[element[user_name_key]].update(element)
+
+        # row = {'name': '홍길동', 'id': 'UTHXXXXX', 'channel_name': 'prefix_직군_게시글'}
+        return user_table
+    else:
+        print("Fail to get user table. cause, length do not match.")
+
+
 def get_user_names_with_channel(channels, channel_prefix):
     users_with_channel = []
 
@@ -228,7 +251,7 @@ def get_user_names_with_channel(channels, channel_prefix):
             member_names = channel['topic']['value'].split()
 
             for name in member_names:
-                users_with_channel.append({'name': name, 'channel_name': channel_name})
+                users_with_channel.append({user_name_key: name, 'channel_name': channel_name})
 
     return users_with_channel
 
@@ -238,7 +261,7 @@ def get_user_names_with_id(users):
 
     for user in users:
         if is_valid_user(user):
-            users_with_id.append({'name': user['real_name'], 'id': user['id']})
+            users_with_id.append({user_name_key: user['real_name'], 'id': user['id']})
 
     return users_with_id
 
