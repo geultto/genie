@@ -26,8 +26,8 @@ def get_history(pageable_object, channel_id, page_size=100):
         messages.extend(response['messages'])
 
         if response['has_more']:
-            last_timestamp = messages[-1]['ts'] # -1 means last element in a list
-            sleep(1) # Respect the Slack API rate limit
+            last_timestamp = messages[-1]['ts']  # -1 means last element in a list
+            sleep(1)  # Respect the Slack API rate limit
         else:
             break
     return messages
@@ -47,7 +47,7 @@ def parse_time_stamp(time_stamp):
         if len(t_list) != 2:
             raise ValueError('Invalid time stamp')
         else:
-            return datetime.utcfromtimestamp( float(t_list[0]))
+            return datetime.utcfromtimestamp(float(t_list[0]))
 
 
 def channel_rename(old_room_name, new_room_name):
@@ -59,7 +59,7 @@ def channel_rename(old_room_name, new_room_name):
         return
     mkdir(new_room_name)
     for file_name in os.listdir(old_room_name):
-        shutil.move( os.path.join(old_room_name, file_name), new_room_name)
+        shutil.move(os.path.join(old_room_name, file_name), new_room_name)
     os.rmdir(old_room_name)
 
 
@@ -102,8 +102,8 @@ def parse_messages(room_dir, messages, room_type):
             channel_rename(old_room_path, new_room_path)
 
         current_messages.append(message)
-    out_file_name = '{room}/{file}.json'.format(room=room_dir, file=current_file_date )
-    write_message_file( out_file_name, current_messages)
+    out_file_name = '{room}/{file}.json'.format(room=room_dir, file=current_file_date)
+    write_message_file(out_file_name, current_messages)
 
 
 def filter_conversations_by_name(channels_or_groups, channel_or_group_names):
@@ -166,7 +166,7 @@ def dump_user_file(users):
     write to user file, any existing file needs to be overwritten.
     """
     with open(os.path.join('../', 'users.json'), 'w') as userFile:
-        json.dump( users, userFile, indent=4 )
+        json.dump(users, userFile, indent=4)
 
 
 def bootstrap_key_values(slack_obj, _dry_run):
