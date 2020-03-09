@@ -89,11 +89,11 @@ pip3 install -r requirements.txt
 ```
 
 ### 2. Slack Token 환경 변수 지정
-- 해당 슬랙 workspace의 API를 접근할 수 있는 토큰을 받아와야 합니다.      
+- 해당 슬랙 workspace의 API를 접근할 수 있는 토큰을 받아와야 합니다.
 - [이곳](https://api.slack.com/legacy/custom-integrations/legacy-tokens)에서 슬랙 토큰을 생성받습니다.
 - 생성 받은 토큰을 `.bash_profile`, `.zshrc` 등의 파일에 다음과 같이 환경 변수로 저장해줍니다.
 ```
-export SLACK_TOKEN='xoxo-your-token'    
+export SLACK_TOKEN='xoxo-your-token'
 ```
 
 
@@ -109,9 +109,10 @@ genie
 ### 4. Run
 
 ```
-python common/main.py --deadline 2020-02-16
+python common/main.py --deadline 2020-03-02
 ```
   - **`deadline`** : 현재 제출의 마감 기한 (`yyyy-mm-dd` 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)    
+  - 데드라인 날짜는 일요일 자정이라 월요일 날짜입니다.
 
   
 **- 다른 Arguments:**

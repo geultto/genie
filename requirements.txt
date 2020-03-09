@@ -1,3 +1,6 @@
 slacker
 pandas
 pick
+pyyaml
+pandas_gbq
+tqdm

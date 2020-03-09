@@ -9,7 +9,8 @@ bigquery_config = yaml.load(
     open(
         os.path.join(root_path, 'config', 'bigquery.yaml'),
         'r'
-    )
+    ),
+    Loader=yaml.FullLoader
 )
 
 
