@@ -235,7 +235,7 @@ def get_user_table(slacker, channel_prefix):
             for element in merged_list:
                 user_table[element[user_name_key]].update(element)
 
-        # row = {'name': '홍길동', 'id': 'UTHXXXXX', 'channel_name': 'prefix_직군_게시글'}
+        # key = '홍길동', value = {'name': '홍길동', 'id': 'UTHXXXXX', 'channel_name': 'prefix_직군_게시글'} 인 dictionary.
         return user_table
     else:
         print("Fail to get user table. cause, length do not match.")
