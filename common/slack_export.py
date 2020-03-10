@@ -221,9 +221,9 @@ def finalize(zip_name, output_directory):
 
 
 # channel_prefix : prefix of the posting channel
-def get_user_table(channel_prefix):
-    users = slack.users.list().body['members']
-    channels = slack.channels.list().body['channels']
+def get_user_table(slacker, channel_prefix):
+    users = slacker.users.list().body['members']
+    channels = slacker.channels.list().body['channels']
 
     user_names_with_id = get_user_names_with_id(users)
     user_names_with_channel = get_user_names_with_channel(channels, channel_prefix)
