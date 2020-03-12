@@ -88,14 +88,21 @@ source env/bin/activate
 pip3 install -r requirements.txt
 ```
 
-### 2. Slack Token 환경 변수 지정
-- 해당 슬랙 workspace의 API를 접근할 수 있는 토큰을 받아와야 합니다.      
-- [이곳](https://api.slack.com/apps/AV18VEUMS/oauth?)에서 슬랙 토큰을 생성받습니다.
-- 생성 받은 토큰을 `.bash_profile`, `.zshrc` 등의 파일에 다음과 같이 환경 변수로 저장해줍니다.
+### 2. Slack API 
+1. workspace admin 권한을 받습니다.
+2. 새로운 글또 workspace 에 slack app 을 install 합니다. 
+  
+    [Slack App 페이지](https://api.slack.com/apps) -> [Create New App]
+3. Your apps -> 글또 앱 -> OAuth & Permissions 탭에서 생성된 API 토큰을 확인할 수 있습니다.
+4. 해당 토큰을 `.bash_profile`, `.zshrc` 등의 파일에 다음과 같이 환경 변수로 저장해줍니다.
 ```
 export SLACK_TOKEN='xoxo-your-token'
 ```
+* Collaborator 권한이 있어야 app 관리 대시보드로 접근이 가능하기 때문에 Collaborators
+ 탭에서 관련 담당자분들을 미리 추가해주시면 좋습니다.
 
+
+ 
 
 ### 3. 마감 날짜 데이터, 유저 데이터 저장
 - 코드 실행 시 활용되는 유저 데이터와 마감 날짜 데이터를 다음과 같이 `outputs` 디렉토리 아래에 저장해주세요.
