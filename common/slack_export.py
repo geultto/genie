@@ -245,13 +245,14 @@ def get_user_names_with_channel(channels, channel_prefix):
     users_with_channel = []
 
     for channel in channels:
+        channel_id = channel['id']
         channel_name = channel['name']
 
         if channel_name.startswith(channel_prefix):
             member_names = channel['topic']['value'].split()
 
             for name in member_names:
-                users_with_channel.append({user_name_key: name, 'channel_name': channel_name})
+                users_with_channel.append({user_name_key: name, 'channel_id': channel_id, 'channel_name': channel_name})
 
     return users_with_channel
 
