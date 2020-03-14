@@ -122,3 +122,13 @@ def send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, pr
     status_df.to_gbq(status_table_id, project_id=project_id, if_exists='replace')
     if phase == 'production':
         status_df.to_gbq(prod_status_table_id, project_id=project_id, if_exists=if_exists_prod)
+
+
+def write_user_table(table_name, user_table, credentials):
+    user_data_frame = pd.DataFrame(data=user_table)
+    user_data_frame.to_gbq(table_name, if_exists='replace', credentials=credentials)
+
+
+def read_user_table(table_name, credentials):
+    query = 'select user_id, user_name, channel_id, channel_name from {}'.format(table_name)
+    print(pd.read_gbq(query=query, credentials=credentials))
