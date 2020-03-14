@@ -262,7 +262,7 @@ def get_user_names_with_id(users):
 
     for user in users:
         if is_valid_user(user):
-            users_with_id.append({user_name_key: user['real_name'], 'id': user['id']})
+            users_with_id.append({'user_id': user['id'], user_name_key: user['real_name']})
 
     return users_with_id
 
