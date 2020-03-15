@@ -12,7 +12,7 @@ def dict_to_message(channel_id, d):
         'parent_user_id': d.get('parent_user_id'),
         'thread_ts': d.get('thread_ts'),
         'text': d['text'],
-        'client_msg_id': d['client_msg_id']
+        'client_msg_id': d.get('client_msg_id')
     }
 
 
