@@ -1,5 +1,6 @@
-import pandas as pd
+from datetime import datetime
 
+import pandas as pd
 from slacker import Slacker
 
 
@@ -51,4 +52,5 @@ for channel_id in channel_ids:
             messages.append(dict_to_message(channel_id, message))
 
 df = pd.DataFrame(messages)
-df.to_gbq(destination_table='geultto_4th_staging.message_raw', project_id='geultto', if_exists='replace')
+suffix = datetime.now().strftime('%Y%m%d_%H%M%S')  # e.g. 20200315_224904
+df.to_gbq(destination_table=f'geultto_4th_staging.message_raw_{suffix}', project_id='geultto', if_exists='replace')
