@@ -1,6 +1,9 @@
 from random import shuffle
 from typing import List
 
+import pandas as pd
+from pandas.io.gbq import read_gbq
+
 
 def get_reviewees(candidates: List[str], reviewers: List[str]) -> List[str]:
     multiple = (len(reviewers) * 2 // len(candidates)) + 1
@@ -78,3 +81,26 @@ def ready_for_sending_bq(deadline: str, teams):
 
     return assignments
 
+
+def read_sql(file_name):
+    with open(file_name, 'r') as file:
+        s = file.read()
+    return s
+
+
+if __name__ == '__main__':
+    suffix = '20200315_225230'  # snapshot 처리를 위한...
+
+    review_mapping_table = f'geultto_4th_staging.review_mapping_raw_{suffix}'
+
+    df = read_gbq(query=read_sql('query.sql').format(suffix=suffix), project_id='geultto')
+    teams = {}
+    for row in df.iterrows():
+        teams[row[1].channel_id] = {'reviewers': row[1].reviewers, 'reviewees': row[1].reviewees}
+
+    assignments = assign_reviewees(teams)
+
+    for assignment in assignments:
+        print(assignment)
+
+    pd.DataFrame(assignments).to_gbq(review_mapping_table, project_id='geultto', if_exists='replace')
