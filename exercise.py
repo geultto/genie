@@ -34,15 +34,15 @@ messages = []
 
 for channel_id in channel_ids:
     print(channel_id)
-    body = client.conversations.history(channel=channel_id).body
+    body = client.conversations.history(channel=channel_id, limit=100).body
     assert body['ok'] and not body['has_more'], f'ok: {body["ok"]}, has_more: {body["has_more"]}'
 
     for message in body['messages']:
         # subtype 이 channel_topic, channel_join 인 메시지는 무시하고 None 인 경우 = 보통의 메시지만 취합니다.
         if message.get('type') == 'message' and not message.get('subtype'):
             if message.get('reply_count', 0) > 0:
-                threads = client.conversations.replies(channel=channel_id, ts=message['thread_ts']).body
-                assert threads['ok'] and not threads['has_more']
+                threads = client.conversations.replies(channel=channel_id, ts=message['thread_ts'], limit=100).body
+                assert threads['ok'] and not threads['has_more'], f'{threads["ok"]}, {threads["has_more"]}'
                 for thread in threads['messages']:
                     # threads 에는 thread 뿐 아니라 thread 가 달린 본래 message 까지 있으므로 걸러줍니다.
                     if not message['ts'] == thread['ts']:
