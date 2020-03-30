@@ -1,12 +1,13 @@
 from random import shuffle
 from typing import List
+from math import ceil
 
 import pandas as pd
 from pandas.io.gbq import read_gbq
 
 
 def get_reviewees(candidates: List[str], reviewers: List[str]) -> List[str]:
-    multiple = (len(reviewers) * 2 // len(candidates)) + 1
+    multiple = ceil(len(reviewers) * 2 / len(candidates))
     reviewees = []
 
     for _ in range(multiple):
