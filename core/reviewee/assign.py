@@ -89,7 +89,7 @@ def read_sql(file_name):
 
 
 if __name__ == '__main__':
-    suffix = '20200315_225230'  # snapshot 처리를 위한...
+    suffix = '20200330_000240'  # snapshot 처리를 위한...
 
     review_mapping_table = f'geultto_4th_staging.review_mapping_raw_{suffix}'
 

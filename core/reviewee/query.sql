@@ -14,7 +14,7 @@ from (
     geultto_4th_staging.message_raw_{suffix}
   where
     (select countif(reaction.name = 'submit' and user_id in unnest(reaction.user_ids)) from unnest(geultto_udf.parse_reactions(replace(reactions, '\'', '\"'))) as reaction) > 0
-    and date(timestamp_micros(cast(cast(ts as numeric) * 1000000 as int64)), 'Asia/Seoul') between '2020-03-02' and '2020-03-15'
+    and date(timestamp_micros(cast(cast(ts as numeric) * 1000000 as int64)), 'Asia/Seoul') between '2020-03-16' and '2020-03-29'
   group by
     channel_id
 ) reviewees using (channel_id)
