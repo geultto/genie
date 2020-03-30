@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pandas as pd
 from slacker import Slacker
+import os
 
 
 def dict_to_message(channel_id, d):
@@ -17,7 +18,7 @@ def dict_to_message(channel_id, d):
     }
 
 
-token = '<token>'
+token = os.environ['GEULTTO_SLACK_TOKEN']
 channel_ids = [
     'CTPJHL1H8',  # 3_데분데사a
     'CTPJHM0GJ',  # 3_데분데사b
