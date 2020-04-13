@@ -11,10 +11,10 @@ from (
   select
     channel_id, array_agg(distinct user_id order by user_id) as user_ids
   from
-    geultto_4th_staging.message_raw_{suffix}
+    geultto_4th_prod.message
   where
-    (select countif(reaction.name = 'submit' and user_id in unnest(reaction.user_ids)) from unnest(geultto_udf.parse_reactions(replace(reactions, '\'', '\"'))) as reaction) > 0
-    and date(timestamp_micros(cast(cast(ts as numeric) * 1000000 as int64)), 'Asia/Seoul') between '2020-03-16' and '2020-03-29'
+    (select countif(reaction.name = 'submit' and user_id in unnest(reaction.user_ids)) from unnest(reactions) as reaction) > 0
+    and date(ts, 'Asia/Seoul') between date_sub('{date_kr_due}', interval 13 day) and '{date_kr_due}'
   group by
     channel_id
 ) reviewees using (channel_id)

@@ -1,6 +1,7 @@
+from datetime import datetime
+from math import ceil
 from random import shuffle
 from typing import List
-from math import ceil
 
 import pandas as pd
 from pandas.io.gbq import read_gbq
@@ -90,11 +91,14 @@ def read_sql(file_name):
 
 
 if __name__ == '__main__':
-    suffix = '20200330_000240'  # snapshot 처리를 위한...
+    # TODO timezone explicit 하게 명시.
+    suffix = datetime.now().strftime('%Y%m%d_%H%M%S')
+    # TODO date_kr_due 를 hard-coding 하지 않을 수 있게...
+    date_kr_due = '2020-04-12'
 
     review_mapping_table = f'geultto_4th_staging.review_mapping_raw_{suffix}'
 
-    df = read_gbq(query=read_sql('query.sql').format(suffix=suffix), project_id='geultto')
+    df = read_gbq(query=read_sql('query.sql').format(date_kr_due=date_kr_due), project_id='geultto')
     teams = {}
     for row in df.iterrows():
         teams[row[1].channel_id] = {'reviewers': row[1].reviewers, 'reviewees': row[1].reviewees}
