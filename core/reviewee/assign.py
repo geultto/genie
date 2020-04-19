@@ -54,8 +54,8 @@ def assign_reviewees(teams):
         reviewers = team["reviewers"]
 
         if len(team["reviewees"]) <= 2:
-            for reviewer in team["reviewers"]:
-                assignments.append({"id": reviewer, "reviewees": [reviewee for reviewee in team["reviewees"] if reviewee is not reviewer]})
+            for reviewer in reviewers:
+                assignments.append({"user_id": reviewer, "reviewee_ids": [reviewee for reviewee in team["reviewees"] if reviewee is not reviewer]})
         else:
             reviewees = get_reviewees(team["reviewees"], reviewers)
 
