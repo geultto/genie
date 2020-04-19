@@ -75,15 +75,6 @@ def assign_reviewees(teams):
     return assignments
 
 
-def ready_for_sending_bq(deadline: str, teams):
-    assignments = assign_reviewees(teams)
-
-    for assignment in assignments:
-        assignment.update({"deadline": deadline})
-
-    return assignments
-
-
 def read_sql(file_name):
     with open(file_name, 'r') as file:
         s = file.read()
