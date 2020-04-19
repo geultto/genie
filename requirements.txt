@@ -5,3 +5,4 @@ pyyaml
 pandas_gbq
 tqdm
 google-cloud-bigquery==1.24.0
+pytest
