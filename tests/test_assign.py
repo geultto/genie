@@ -1,4 +1,3 @@
-import pytest
 from random import randrange
 
 from core.reviewee.assign import assign_reviewees
@@ -66,4 +65,3 @@ for _ in range(10000):
 
         if len(result["reviewee_ids"]) > 1:
             assert result["reviewee_ids"][0] != result["reviewee_ids"][1]
-

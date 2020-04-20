@@ -19,11 +19,11 @@ def get_reviewees(candidates: List[str], reviewers: List[str]) -> List[str]:
     last_reviewer = reviewers[-1]
     i = len(reviewees) - 2
 
-    if reviewees[i] is last_reviewer:
+    if reviewees[i] == last_reviewer:
         n = len(candidates)
         reviewees[i], reviewees[-n] = reviewees[-n], reviewees[i]
 
-    if reviewees[i + 1] is last_reviewer:
+    if reviewees[i + 1] == last_reviewer:
         n = len(candidates)
         reviewees[i + 1], reviewees[-n + 1] = reviewees[-n + 1], reviewees[i + 1]
 
@@ -32,7 +32,7 @@ def get_reviewees(candidates: List[str], reviewers: List[str]) -> List[str]:
 
 def swap_for_preventing_review_myself(reviewees: List[str], assignees: [str, str], cursor: int):
     duplicate = assignees[cursor]
-    index = [index for index, reviewee in enumerate(reviewees) if reviewee is not duplicate][0]
+    index = [index for index, reviewee in enumerate(reviewees) if reviewee != duplicate][0]
 
     assignees[cursor] = reviewees.pop(index)
     reviewees.insert(0, duplicate)
@@ -40,7 +40,7 @@ def swap_for_preventing_review_myself(reviewees: List[str], assignees: [str, str
 
 def swap_for_same_reviewee(reviewees: List[str], assignees: [str, str], reviewer: str):
     duplicate = assignees[0]
-    index = [index for index, reviewee in enumerate(reviewees) if reviewee is not duplicate and reviewee is not reviewer][0]
+    index = [index for index, reviewee in enumerate(reviewees) if reviewee != duplicate and reviewee != reviewer][0]
 
     assignees[0] = reviewees.pop(index)
     reviewees.insert(0, duplicate)
@@ -49,13 +49,12 @@ def swap_for_same_reviewee(reviewees: List[str], assignees: [str, str], reviewer
 def assign_reviewees(teams):
     assignments = []
 
-    for team_id in teams.keys():
-        team = teams[team_id]
+    for team in teams.values():
         reviewers = team["reviewers"]
 
         if len(team["reviewees"]) <= 2:
             for reviewer in reviewers:
-                assignments.append({"user_id": reviewer, "reviewee_ids": [reviewee for reviewee in team["reviewees"] if reviewee is not reviewer]})
+                assignments.append({"user_id": reviewer, "reviewee_ids": [reviewee for reviewee in team["reviewees"] if reviewee != reviewer]})
         else:
             reviewees = get_reviewees(team["reviewees"], reviewers)
 
@@ -66,7 +65,7 @@ def assign_reviewees(teams):
                 while reviewer in assignees:
                     swap_for_preventing_review_myself(draft_reviewees, assignees, assignees.index(reviewer))
 
-                while len(assignees) >= 2 and assignees[0] is assignees[1]:
+                while len(assignees) >= 2 and assignees[0] == assignees[1]:
                     swap_for_same_reviewee(draft_reviewees, assignees, reviewer)
 
                 assignments.append({"user_id": reviewer, "reviewee_ids": assignees})
