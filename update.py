@@ -79,8 +79,14 @@ def update_message(destination):
     job = BIGQUERY_CLIENT.query(sql, job_config=job_config)
     job.result()  # async job 이라 result 를 명시적으로 호출해서 job 이 끝날때까지 blocking 합니다.
 
+def update_submit_table(destination):
+    sql = read_sql('sql/create_submit_tbl.sql')
+    job_config = QueryJobConfig(destination=destination, write_disposition=WriteDisposition.WRITE_TRUNCATE)
+    job = BIGQUERY_CLIENT.query(sql, job_config=job_config)
+    job.result()
 
 if __name__ == '__main__':
     messages = reduce(lambda l1, l2: l1 + l2, [list_channel_messages(channel_id) for channel_id in CHANNEL_IDS])
     insert_to_message_raw(messages)
     update_message('geultto.geultto_4th_prod.message')
+    update_submit_table('geultto.geultto_4th_prod.submit')
