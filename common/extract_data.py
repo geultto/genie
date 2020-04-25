@@ -2,11 +2,13 @@ import os, json
 import pandas as pd
 from datetime import datetime, timedelta
 from utils import bigquery_config, phase, root_path, cardinal
+from google.oauth2 import service_account
 
 _project_id = bigquery_config[phase]['project']
 _suffix = bigquery_config[phase]['suffix']
 _jwt = os.path.join(root_path, 'config', bigquery_config[phase]['jwt'])
 
+_credentials = service_account.Credentials.from_service_account_file(os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
 
 
 def get_deadline_data(abs_output_directory):
@@ -122,3 +124,13 @@ def send_data_to_gbq(dataz, phase, project_id, log_table_id, status_table_id, pr
     status_df.to_gbq(status_table_id, project_id=project_id, if_exists='replace')
     if phase == 'production':
         status_df.to_gbq(prod_status_table_id, project_id=project_id, if_exists=if_exists_prod)
+
+
+def write_user_table(table_name, user_table):
+    user_data_frame = pd.DataFrame(data=user_table)
+    user_data_frame.to_gbq(table_name, if_exists='replace', credentials=_credentials)
+
+
+def read_user_table(table_name):
+    query = 'select user_id, user_name, channel_id, channel_name from {}'.format(table_name)
+    print(pd.read_gbq(query=query, credentials=_credentials))

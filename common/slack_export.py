@@ -4,11 +4,13 @@ import shutil
 from datetime import datetime
 from pick import pick
 from time import sleep
+from collections import defaultdict
 
 
 user_names_by_id = {}
 user_ids_by_name = {}
 dry_run = None
+user_name_key = 'user_name'
 
 
 def get_history(pageable_object, channel_id, page_size=100):
@@ -26,8 +28,8 @@ def get_history(pageable_object, channel_id, page_size=100):
         messages.extend(response['messages'])
 
         if response['has_more']:
-            last_timestamp = messages[-1]['ts'] # -1 means last element in a list
-            sleep(1) # Respect the Slack API rate limit
+            last_timestamp = messages[-1]['ts']  # -1 means last element in a list
+            sleep(1)  # Respect the Slack API rate limit
         else:
             break
     return messages
@@ -47,7 +49,7 @@ def parse_time_stamp(time_stamp):
         if len(t_list) != 2:
             raise ValueError('Invalid time stamp')
         else:
-            return datetime.utcfromtimestamp( float(t_list[0]))
+            return datetime.utcfromtimestamp(float(t_list[0]))
 
 
 def channel_rename(old_room_name, new_room_name):
@@ -59,7 +61,7 @@ def channel_rename(old_room_name, new_room_name):
         return
     mkdir(new_room_name)
     for file_name in os.listdir(old_room_name):
-        shutil.move( os.path.join(old_room_name, file_name), new_room_name)
+        shutil.move(os.path.join(old_room_name, file_name), new_room_name)
     os.rmdir(old_room_name)
 
 
@@ -102,8 +104,8 @@ def parse_messages(room_dir, messages, room_type):
             channel_rename(old_room_path, new_room_path)
 
         current_messages.append(message)
-    out_file_name = '{room}/{file}.json'.format(room=room_dir, file=current_file_date )
-    write_message_file( out_file_name, current_messages)
+    out_file_name = '{room}/{file}.json'.format(room=room_dir, file=current_file_date)
+    write_message_file(out_file_name, current_messages)
 
 
 def filter_conversations_by_name(channels_or_groups, channel_or_group_names):
@@ -166,7 +168,7 @@ def dump_user_file(users):
     write to user file, any existing file needs to be overwritten.
     """
     with open(os.path.join('../', 'users.json'), 'w') as userFile:
-        json.dump( users, userFile, indent=4 )
+        json.dump(users, userFile, indent=4)
 
 
 def bootstrap_key_values(slack_obj, _dry_run):
@@ -216,3 +218,54 @@ def finalize(zip_name, output_directory):
     if zip_name:
         shutil.make_archive(zip_name, 'zip', output_directory, None)
         shutil.rmtree(output_directory)
+
+
+# channel_prefix : prefix of the posting channel
+def get_user_table(slacker, channel_prefix):
+    users = slacker.users.list().body['members']
+    channels = slacker.channels.list().body['channels']
+
+    user_names_with_id = get_user_names_with_id(users)
+    user_names_with_channel = get_user_names_with_channel(channels, channel_prefix)
+
+    if len(user_names_with_id) == len(user_names_with_channel):
+        user_table = defaultdict(dict)
+
+        for merged_list in (user_names_with_id, user_names_with_channel):
+            for element in merged_list:
+                user_table[element[user_name_key]].update(element)
+
+        # user_table : key = '홍길동', value = {'name': '홍길동', 'id': 'UTHXXXXX', 'channel_name': 'prefix_직군_게시글'} 인 dict.
+        return user_table.values()
+    else:
+        print("Fail to get user table. cause, length do not match.")
+
+
+def get_user_names_with_channel(channels, channel_prefix):
+    users_with_channel = []
+
+    for channel in channels:
+        channel_id = channel['id']
+        channel_name = channel['name']
+
+        if channel_name.startswith(channel_prefix):
+            member_names = channel['topic']['value'].split()
+
+            for name in member_names:
+                users_with_channel.append({user_name_key: name, 'channel_id': channel_id, 'channel_name': channel_name})
+
+    return users_with_channel
+
+
+def get_user_names_with_id(users):
+    users_with_id = []
+
+    for user in users:
+        if is_valid_user(user):
+            users_with_id.append({'user_id': user['id'], user_name_key: user['real_name']})
+
+    return users_with_id
+
+
+def is_valid_user(user):
+    return not user['is_bot'] and not user['deleted'] and user['real_name'] != 'Slackbot'
