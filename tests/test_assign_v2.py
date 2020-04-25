@@ -48,39 +48,6 @@ data = {
 }
 
 for _ in range(10000):
-    assignments = []
-
-    for team in data.values():
-        reviewees = []
-        multiple = ceil(len(team["reviewers"]) * 2 / len(team["reviewees"]))
-
-        for _ in range(multiple):
-            members = team["reviewees"][:]
-            shuffle(members)
-            reviewees += members
-
-        reviewers = list(team["reviewers"].keys())
-        shuffle(reviewers)
-
-        for reviewer in reviewers:
-            stack = []
-
-            candidates = [(reviewee, count) for reviewee, count in team["reviewers"][reviewer].items()]
-
-            candidates.sort(key=itemgetter(1))
-
-            for candidate, _ in candidates:
-                try:
-                    index = reviewees.index(candidate)
-                    target = reviewees.pop(index)
-                    stack.append(target)
-                except ValueError:
-                    pass
-
-                if len(stack) == 2:
-                    break
-
-            assignments.append({"user_id": reviewer, "reviewee_ids": stack})
 
 
     for assignment in assignments:
