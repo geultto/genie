@@ -1,6 +1,9 @@
 import datetime
 import os
 from functools import reduce
+from math import ceil
+from random import shuffle
+from typing import List
 
 import pandas as pd
 from google.cloud import bigquery
@@ -67,20 +70,117 @@ def list_channel_messages(channel_id):
     return channel_messages
 
 
-def insert_to_message_raw(messages):
+def insert_message_raw():
+    messages = reduce(lambda l1, l2: l1 + l2, [list_channel_messages(channel_id) for channel_id in CHANNEL_IDS])
     df = pd.DataFrame(messages)
     df['time_ms'] = int(datetime.datetime.now().timestamp() * 1000000)  # 언제 insert 했는지 epoch microseconds 로 적어줍니다.
     df.to_gbq(destination_table=f'geultto_4th_prod.message_raw', project_id='geultto', if_exists='append')
 
 
-def update_message(destination):
+def update_message():
     sql = read_sql('sql/message_raw_to_message.sql')
-    job_config = QueryJobConfig(destination=destination, write_disposition=WriteDisposition.WRITE_TRUNCATE)
+    job_config = QueryJobConfig(destination='geultto.geultto_4th_prod.message',
+                                write_disposition=WriteDisposition.WRITE_TRUNCATE)
     job = BIGQUERY_CLIENT.query(sql, job_config=job_config)
     job.result()  # async job 이라 result 를 명시적으로 호출해서 job 이 끝날때까지 blocking 합니다.
 
 
+def get_reviewees(candidates: List[str], reviewers: List[str]) -> List[str]:
+    multiple = ceil(len(reviewers) * 2 / len(candidates))
+    reviewees = []
+
+    for _ in range(multiple):
+        members = candidates[:]
+        shuffle(members)
+        reviewees += members
+
+    last_reviewer = reviewers[-1]
+    i = len(reviewees) - 2
+
+    if reviewees[i] == last_reviewer:
+        n = len(candidates)
+        reviewees[i], reviewees[-n] = reviewees[-n], reviewees[i]
+
+    if reviewees[i + 1] == last_reviewer:
+        n = len(candidates)
+        reviewees[i + 1], reviewees[-n + 1] = reviewees[-n + 1], reviewees[i + 1]
+
+    return reviewees
+
+
+def swap_for_preventing_review_myself(reviewees: List[str], assignees: [str, str], cursor: int):
+    duplicate = assignees[cursor]
+    index = [index for index, reviewee in enumerate(reviewees) if reviewee != duplicate][0]
+
+    assignees[cursor] = reviewees.pop(index)
+    reviewees.insert(0, duplicate)
+
+
+def swap_for_same_reviewee(reviewees: List[str], assignees: [str, str], reviewer: str):
+    duplicate = assignees[0]
+    index = [index for index, reviewee in enumerate(reviewees) if reviewee != duplicate and reviewee != reviewer][0]
+
+    assignees[0] = reviewees.pop(index)
+    reviewees.insert(0, duplicate)
+
+
+def assign_reviewees(teams):
+    assignments = []
+
+    for team in teams.values():
+        reviewers = team["reviewers"]
+
+        if len(team["reviewees"]) <= 2:
+            for reviewer in reviewers:
+                assignments.append({"user_id": reviewer, "reviewee_ids": [reviewee for reviewee in team["reviewees"] if
+                                                                          reviewee != reviewer]})
+        else:
+            reviewees = get_reviewees(team["reviewees"], reviewers)
+
+            for reviewer in reviewers:
+                assignees = reviewees[:2]
+                draft_reviewees = reviewees[2:]
+
+                while reviewer in assignees:
+                    swap_for_preventing_review_myself(draft_reviewees, assignees, assignees.index(reviewer))
+
+                while len(assignees) >= 2 and assignees[0] == assignees[1]:
+                    swap_for_same_reviewee(draft_reviewees, assignees, reviewer)
+
+                assignments.append({"user_id": reviewer, "reviewee_ids": assignees})
+                reviewees = draft_reviewees
+
+    return assignments
+
+
+def insert_review_mapping():
+    row_iterator = BIGQUERY_CLIENT.query(read_sql('sql/need_review_mapping_insert.sql')).result()
+    assert row_iterator.total_rows == 1
+    need_insert = list(row_iterator)[0].get('need_insert')
+    assert isinstance(need_insert, bool)
+
+    if need_insert:
+        df = pd.read_gbq(query=read_sql('sql/reviewers_and_reviewees.sql'))
+        teams = {}
+        for row in df.itertuples():
+            teams[row.channel_id] = {'reviewers': list(row.reviewers), 'reviewees': list(row.reviewees)}
+        assignments = assign_reviewees(teams)
+        # TODO timezone explicit 하게 명시.
+        suffix = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        table_review_mapping_raw = f'geultto_4th_staging.review_mapping_raw_{suffix}'
+        df = pd.DataFrame(assignments)
+        df['time_ms'] = int(datetime.datetime.now().timestamp() * 1000000)  # epoch microseconds.
+        df.to_gbq(table_review_mapping_raw)
+        BIGQUERY_CLIENT.query(read_sql('sql/review_mapping_raw_to_review_mapping.sql').format(table_review_mapping_raw))
+        BIGQUERY_CLIENT.delete_table(table_review_mapping_raw)
+
+
 if __name__ == '__main__':
-    messages = reduce(lambda l1, l2: l1 + l2, [list_channel_messages(channel_id) for channel_id in CHANNEL_IDS])
-    insert_to_message_raw(messages)
-    update_message('geultto.geultto_4th_prod.message')
+    # slack api 로 데이터 받아와서 message_raw 에 insert.
+    insert_message_raw()
+
+    # message_raw 에서 적절히 중복 제거하여 message 로 overwrite.
+    update_message()
+
+    # 필요하다면 reviewee 지정해서 review_mapping 에 insert.
+    insert_review_mapping()
