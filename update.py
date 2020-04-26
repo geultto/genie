@@ -28,8 +28,8 @@ BIGQUERY_CLIENT = bigquery.Client()
 CHANNEL_IDS = ['CTPJHL1H8', 'CTPJHM0GJ', 'CU2C9MB96', 'CU4882QUF', 'CTS8D3FFT', 'CU2CW80KF', 'CU2CW93M3', 'CTPJJ07UJ']
 
 
-def read_sql(file_name):
-    with open(file_name, 'r') as file:
+def read_sql(file_path):
+    with open(file_path, 'r') as file:
         s = file.read()
     return s
 
@@ -175,6 +175,21 @@ def insert_review_mapping():
         BIGQUERY_CLIENT.delete_table(table_review_mapping_raw)
 
 
+def assert_sql(file_path):
+    # sql 실행 결과가 b 라는 이름의 boolean column 으로 row 가 1개 뿐 이고 그 값이 true 여야 합니다.
+    row_iterator = BIGQUERY_CLIENT.query(read_sql(file_path)).result()
+    assert row_iterator.total_rows == 1
+    b = list(row_iterator)[0].get('b')
+    assert isinstance(b, bool)
+    assert b, f'{file_path} 의 b 가 False.'
+
+
+def assert_review_mapping():
+    assert_sql('sql/assert_review_mapping_count_by_due.sql')
+    assert_sql('sql/assert_reviewee_ids_predicates.sql')
+    assert_sql('sql/assert_reviewers_are_equally_mapped.sql')
+
+
 if __name__ == '__main__':
     # slack api 로 데이터 받아와서 message_raw 에 insert.
     insert_message_raw()
@@ -184,3 +199,6 @@ if __name__ == '__main__':
 
     # 필요하다면 reviewee 지정해서 review_mapping 에 insert.
     insert_review_mapping()
+
+    # review_mapping 테이블의 데이터가 만족해야 할 것들을 확인합니다.
+    assert_review_mapping()
