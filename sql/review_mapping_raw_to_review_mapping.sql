@@ -5,4 +5,4 @@ select
   geultto_udf.find_due_ts(timestamp_micros(time_ms)) as due_ts,
   timestamp_micros(time_ms) as insert_ts,
 from
-  geultto_4th_staging.{table_review_mapping_raw}
+  {table_review_mapping_raw}

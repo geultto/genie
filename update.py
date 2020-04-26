@@ -173,7 +173,8 @@ def insert_review_mapping():
         df = pd.DataFrame(assignments)
         df['time_ms'] = int(datetime.datetime.now().timestamp() * 1000000)  # epoch microseconds.
         df.to_gbq(table_review_mapping_raw)
-        BIGQUERY_CLIENT.query(read_sql('sql/review_mapping_raw_to_review_mapping.sql').format(table_review_mapping_raw))
+        BIGQUERY_CLIENT.query(read_sql('sql/review_mapping_raw_to_review_mapping.sql').format(
+            table_review_mapping_raw=table_review_mapping_raw)).result()
         BIGQUERY_CLIENT.delete_table(table_review_mapping_raw)
 
 
