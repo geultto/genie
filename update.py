@@ -51,7 +51,7 @@ def list_channel_messages(channel_id):
     print(f'list_channel_messages started for {channel_id}')
     channel_messages = []
 
-    body = SLACK_CLIENT.conversations.history(channel=channel_id).body
+    body = SLACK_CLIENT.conversations.history(channel=channel_id, limit=200).body
     assert body['ok'] and not body['has_more'], f'ok: {body["ok"]}, has_more: {body["has_more"]}'
 
     for message in body['messages']:
@@ -158,6 +158,8 @@ def insert_review_mapping():
     assert row_iterator.total_rows == 1
     need_insert = list(row_iterator)[0].get('need_insert')
     assert isinstance(need_insert, bool)
+
+    print(f'need_insert : {need_insert}')
 
     if need_insert:
         df = pd.read_gbq(query=read_sql('sql/reviewers_and_reviewees.sql'))
