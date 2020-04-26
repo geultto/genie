@@ -11,7 +11,7 @@ from (
     due_ts = geultto_udf.find_due_ts(current_timestamp())
 ) cross join (
   select
-    max(ts) > timestamp_sub(geultto_udf.find_due_ts(current_timestamp()), interval 14 day) as message_exists
+    max(insert_ts) > timestamp_sub(geultto_udf.find_due_ts(current_timestamp()), interval 14 day) as message_exists
   from
     geultto_4th_prod.message
 )
