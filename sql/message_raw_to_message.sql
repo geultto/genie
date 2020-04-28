@@ -29,13 +29,14 @@ from
             -- feedback 은 thread_ts + 2주를 기준으로 마감 시각을 결정합니다. feedback thread 달고 -> 리뷰어 지정되고 -> feedback emoji 만 다는 케이스를 고려하기 위함입니다.
             -- submit, feedback emoji 를 실수로 함께 매단 케이스가 1건 존재하여 case when 절에서 우선 submit or pass 여부로 분기합니다.
             case
+              when user_id = 'UT3DE17S7' and ts = '2020-02-19 12:51:14.020 UTC' then '2020-03-15 15:00:00 UTC' -- 훈련소 입소로 2주차 글 미리 제출한 것 따로 처리.
               when (select countif(r.name in ('submit', 'pass')) from unnest(reactions) as r) > 0 then geultto_udf.find_due_ts(ts)
-              when (select countif(r.name = 'feedback') from unnest(reactions) as r) > 0 then geultto_udf.find_due_ts(timestamp_add(thread_ts, interval 14 day))
+              when (select countif(r.name = 'feedback') from unnest(reactions) as r) > 0 then timestamp_add(geultto_udf.find_due_ts(thread_ts), interval 14 day)
               else geultto_udf.find_due_ts(ts)
             end as due_ts
           from (
             select
-              channel_id,
+              channel_id, user_id,
               timestamp_micros(cast(cast(ts as numeric) * 1000000 as int64)) as ts,
               timestamp_micros(cast(cast(thread_ts as numeric) * 1000000 as int64)) as thread_ts,
               timestamp_micros(time_ms) as insert_ts,

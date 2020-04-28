@@ -77,12 +77,10 @@ def insert_message_raw():
     df.to_gbq(destination_table=f'geultto_4th_prod.message_raw', project_id='geultto', if_exists='append')
 
 
-def update_message():
-    sql = read_sql('sql/message_raw_to_message.sql')
-    job_config = QueryJobConfig(destination='geultto.geultto_4th_prod.message',
-                                write_disposition=WriteDisposition.WRITE_TRUNCATE)
-    job = BIGQUERY_CLIENT.query(sql, job_config=job_config)
-    job.result()  # async job 이라 result 를 명시적으로 호출해서 job 이 끝날때까지 blocking 합니다.
+def update_table(sql, destination):
+    job_config = QueryJobConfig(destination=destination, write_disposition=WriteDisposition.WRITE_TRUNCATE)
+    # async job 이라 result 를 명시적으로 호출해서 job 이 끝날때까지 blocking 합니다.
+    BIGQUERY_CLIENT.query(sql, job_config=job_config).result()
 
 
 def get_reviewees(candidates: List[str], reviewers: List[str]) -> List[str]:
@@ -198,10 +196,17 @@ if __name__ == '__main__':
     insert_message_raw()
 
     # message_raw 에서 적절히 중복 제거하여 message 로 overwrite.
-    update_message()
+    update_table(read_sql('sql/message_raw_to_message.sql'), 'geultto.geultto_4th_prod.message')
 
     # 필요하다면 reviewee 지정해서 review_mapping 에 insert.
     insert_review_mapping()
 
     # review_mapping 테이블의 데이터가 만족해야 할 것들을 확인합니다.
     assert_review_mapping()
+
+    # submit, pass, feedback 테이블 overwrite.
+    # TODO submit_submit -> submit?
+    update_table(read_sql('sql/submit.sql'), 'geultto.geultto_4th_prod.submit_submit')
+    update_table(read_sql('sql/pass.sql'), 'geultto.geultto_4th_prod.pass')
+    update_table(read_sql('sql/feedback.sql'), 'geultto.geultto_4th_prod.feedback')
+    update_table(read_sql('sql/result.sql'), 'geultto.geultto_4th_prod.result')
