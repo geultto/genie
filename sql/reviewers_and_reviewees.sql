@@ -5,6 +5,8 @@ from (
     channel_id, array_agg(distinct user_id order by user_id) as user_ids
   from
     geultto_4th_prod.user
+  where
+    not user_id = 'UTGP424P9' -- 사실상 활동하지 않는 유저 배제.
   group by
     channel_id
 ) reviewers left join (
