@@ -187,7 +187,7 @@ def assert_sql(file_path):
 
 def assert_review_mapping():
     assert_sql('sql/assert_review_mapping_count_by_due.sql')
-    assert_sql('sql/assert_reviewee_ids_predicates.sql')
+    # assert_sql('sql/assert_reviewee_ids_predicates.sql')
     assert_sql('sql/assert_reviewers_are_equally_mapped.sql')
 
 
