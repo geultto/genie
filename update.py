@@ -51,7 +51,7 @@ def list_channel_messages(channel_id):
     print(f'list_channel_messages started for {channel_id}')
     channel_messages = []
 
-    body = SLACK_CLIENT.conversations.history(channel=channel_id, limit=200).body
+    body = SLACK_CLIENT.conversations.history(channel=channel_id, limit=300).body
     assert body['ok'] and not body['has_more'], f'ok: {body["ok"]}, has_more: {body["has_more"]}'
 
     for message in body['messages']:
