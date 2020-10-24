@@ -190,6 +190,11 @@ def assert_review_mapping():
     # assert_sql('sql/assert_reviewee_ids_predicates.sql')
     assert_sql('sql/assert_reviewers_are_equally_mapped.sql')
 
+def update_submit_table(destination):
+    sql = read_sql('sql/create_submit_tbl.sql')
+    job_config = QueryJobConfig(destination=destination, write_disposition=WriteDisposition.WRITE_TRUNCATE)
+    job = BIGQUERY_CLIENT.query(sql, job_config=job_config)
+    job.result()
 
 if __name__ == '__main__':
     # slack api 로 데이터 받아와서 message_raw 에 insert.
