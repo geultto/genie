@@ -11,7 +11,7 @@ from (
         user_id, due_ts, ts,
         lag(due_ts, 1) over (partition by user_id order by due_ts) as due_ts_prev,
       from
-        geultto_4th_prod.message
+        geultto_5th_staging.message
       where
         (select countif(r.name = 'pass' and user_id in unnest(r.user_ids)) from unnest(reactions) as r) > 0
     )

@@ -38,14 +38,14 @@ from (
       select
         distinct(due_ts) as due_ts
       from
-        geultto_4th_prod.message
+        geultto_5th_staging.message
       where
         due_ts < current_timestamp()
     ) due
-      cross join geultto_4th_prod.user
-      left join geultto_4th_prod.pass using (due_ts, user_id)
-      left join geultto_4th_prod.submit_submit using (due_ts, user_id)
-      left join geultto_4th_prod.feedback using (due_ts, user_id)
+      cross join geultto_5th_staging.user
+      left join geultto_5th_staging.pass using (due_ts, user_id)
+      left join geultto_5th_staging.submit_submit using (due_ts, user_id)
+      left join geultto_5th_staging.feedback using (due_ts, user_id)
   )
 )
 order by

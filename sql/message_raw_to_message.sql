@@ -10,7 +10,7 @@ select
   insert_ts,
   due_ts
 from
-  geultto_4th_prod.message_raw
+  geultto_5th_staging.message_raw
   join (
     select
       channel_id, ts, insert_ts, due_ts
@@ -43,7 +43,7 @@ from
               timestamp_micros(time_ms) as insert_ts,
               array(select r from unnest(geultto_udf.parse_reactions(replace(reactions, '\'', '\"'))) as r where r.name in ('submit', 'feedback', 'pass')) as reactions
             from
-              geultto_4th_prod.message_raw
+              geultto_5th_staging.message_raw
           )
         )
       )

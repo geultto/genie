@@ -36,7 +36,7 @@
 <br>
 
 ### 데이터 필터링 로직
-#### 1. 글 제출 체크 (2am)
+#### 1. 글 제출 체크 (12am)
 - **1차 필터링 - deadline** : 저번 마감 시간과 이번 마감 시간 사이에 속하는 메세지 골라내기
 - **2차 필터링 - self reaction** : self로 `submit` reaction을 달아놓은 메세지인지 확인
 - 위 필터링을 모두 만족하면 마감 내에 정상 제출된 메세지이므로, 메세지 내에서 `url`, `time`, `message_id` 등의 데이터 저장
@@ -60,21 +60,29 @@
 ## Code Architecture
 ```
 genie
-├── config : 빅쿼리 설정 관련 데이터
-│   ├── bigquery.yaml : 빅쿼리 관련 파라미터
-│   └── geultto-genie-***.json : 빅쿼리 접근 private key 정보 (빅쿼리에서 다운로드)
-│
-├── outputs : slack에서 가져온 데이터 저장
-│
-├── common
-│   ├── main.py : 메인 실행 스크립트
-│   ├── slack_export.py : slack 데이터 추출 스크립트
-│   ├── checker.py : slack message에서 글 제출 확인 로직
-│   └── extract_data.py : bigquery 및 json data 처리
-│
-└── tests : 테스트 코드
-    ├── test_checker.py : test case 실행
-    └── README.md : pytest 관련 자료 모음
+├── LICENSE
+├── README.md
+├── requirements.txt
+├── config : 설정 파일
+│   └── geultto-genie-***.json : 빅쿼리 접근 private key 
+├── sql
+│   ├── assert_review_mapping_count_by_due.sql
+│   ├── assert_reviewee_ids_predicates.sql
+│   ├── assert_reviewers_are_equally_mapped.sql
+│   ├── create_submit_tbl.sql
+│   ├── feedback.sql
+│   ├── message_raw_to_message.sql
+│   ├── need_review_mapping_insert.sql
+│   ├── pass.sql
+│   ├── result.sql
+│   ├── review_mapping_raw_to_review_mapping.sql
+│   ├── reviewers_and_reviewees.sql
+│   └── submit.sql
+├── tests
+│   ├── README.md
+│   └── test code
+└── update.py
+
 ```
 <br>
 <br>
@@ -100,39 +108,24 @@ export SLACK_TOKEN='xoxo-your-token'
 ```
 * Collaborator 권한이 있어야 app 관리 대시보드로 접근이 가능하기 때문에 Collaborators
  탭에서 관련 담당자분들을 미리 추가해주시면 좋습니다.
-
-
  
 
 ### 3. 마감 날짜 데이터, 유저 데이터 저장
-- 코드 실행 시 활용되는 유저 데이터와 마감 날짜 데이터를 다음과 같이 `outputs` 디렉토리 아래에 저장해주세요.
-```
-genie
-└── outputs
-    ├── deadline_dates.csv
-    └── users.json
-```
+- 빅쿼리에 데이터가 저장됩니다.
+
 
 ### 4. Run
 
 ```
-python common/main.py --deadline 2020-03-02
+python update.py
 ```
-  - **`deadline`** : 현재 제출의 마감 기한 (`yyyy-mm-dd` 형태로 입력) (추후 crontab으로 자동화하면서 직접 입력해 줄 필요 없어질 예정)    
-  - 데드라인 날짜는 일요일 자정이라 월요일 날짜입니다.
 
-  
-**- 다른 Arguments:**
-  - **`channel_prefix`** : 추출하기 원하는 채널의 접두사 (ex. `1_`, `2_` 등)
-  - **`gbq_phase`** : 실행시키는 용도 (`development` 또는 `production`으로 입력)
-  - **`run_all`** : `True` - 모든 deadline에 대해 체크 / `False` - 이번 deadline에 대해서만 체크
-<br>
+- 데드라인 날짜는 일요일 자정이라 월요일 날짜입니다.
+
+
 <br>
 
 ## Crontab
 - To Be Update
 <br>
 <br>
-
-## Reference
-- 슬랙 데이터 추출 : [slack_export](https://github.com/zach-snell/slack-export)

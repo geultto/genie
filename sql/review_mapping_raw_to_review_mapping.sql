@@ -1,4 +1,4 @@
-insert geultto_4th_prod.review_mapping
+insert geultto_5th_staging.review_mapping
 select
   user_id,
   geultto_udf.parse_reviewee_ids(replace(reviewee_ids, '\'', '\"')) as reviewee_ids,

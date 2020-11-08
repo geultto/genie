@@ -15,14 +15,14 @@ from (
     -- 가장 빨리한 ts 를 취한 뒤 due_ts 와 비교합니다.
     min(feedback.ts) as ts_min
   from
-    geultto_4th_prod.review_mapping
+    geultto_5th_staging.review_mapping
     left join unnest(reviewee_ids) as reviewee_id
     left join (
       select
         feedback.due_ts, feedback.user_id, feedback.parent_user_id, feedback.ts
       from
-        geultto_4th_prod.message feedback
-        join geultto_4th_prod.message submit on feedback.channel_id = submit.channel_id
+        geultto_5th_staging.message feedback
+        join geultto_5th_staging.message submit on feedback.channel_id = submit.channel_id
           and feedback.parent_user_id = submit.user_id
           and feedback.thread_ts = submit.ts
           and (select countif(r.name = 'submit' and submit.user_id in unnest(r.user_ids)) from unnest(submit.reactions) as r) > 0
@@ -34,7 +34,7 @@ from (
   group by
     due_ts, user_id, reviewee_id
 ) r
-  left join geultto_4th_prod.user on reviewee_id = user.user_id
+  left join geultto_5th_staging.user on reviewee_id = user.user_id
 group by
   due_ts, user_id
 order by
