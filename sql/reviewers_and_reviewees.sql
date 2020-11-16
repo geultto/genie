@@ -4,16 +4,16 @@ from (
   select
     channel_id, array_agg(distinct user_id order by user_id) as user_ids
   from
-    geultto_4th_prod.user
+    geultto_5th_prod.user
   where
-    not user_id = 'UTGP424P9' -- 사실상 활동하지 않는 유저 배제.
+     1=1 -- 사실상 활동하지 않는 유저 배제.
   group by
     channel_id
 ) reviewers left join (
   select
     channel_id, array_agg(distinct user_id order by user_id) as user_ids
   from
-    geultto_4th_prod.message
+    geultto_5th_prod.message
   where
     (select countif(reaction.name = 'submit' and user_id in unnest(reaction.user_ids)) from unnest(reactions) as reaction) > 0
     -- 마감일 직후에 geultto_udf.find_due_ts(current_timestamp()) 를 호출하면 다음 마감일이 됩니다.

@@ -86,7 +86,7 @@ if __name__ == '__main__':
     # TODO date_kr_due 를 hard-coding 하지 않을 수 있게...
     date_kr_due = '2020-04-12'
 
-    review_mapping_table = f'geultto_4th_staging.review_mapping_raw_{suffix}'
+    review_mapping_table = f'geultto_4th_prod.review_mapping_raw_{suffix}'
 
     df = read_gbq(query=read_sql('query.sql').format(date_kr_due=date_kr_due), project_id='geultto')
     teams = {}

@@ -1,8 +1,8 @@
-slacker
-pandas
+pandas==1.1.4
 pick
 pyyaml
-pandas_gbq
+pandas_gbq==0.14.0
 tqdm
 google-cloud-bigquery==1.24.0
 pytest
+slack_sdk==3.0.0rc3
