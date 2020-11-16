@@ -4,7 +4,7 @@ from (
   select
     channel_id, array_agg(distinct user_id order by user_id) as user_ids
   from
-    geultto_5th_staging.user
+    geultto_5th_prod.user
   where
      1=1 -- 사실상 활동하지 않는 유저 배제.
   group by
@@ -13,7 +13,7 @@ from (
   select
     channel_id, array_agg(distinct user_id order by user_id) as user_ids
   from
-    geultto_5th_staging.message
+    geultto_5th_prod.message
   where
     (select countif(reaction.name = 'submit' and user_id in unnest(reaction.user_ids)) from unnest(reactions) as reaction) > 0
     -- 마감일 직후에 geultto_udf.find_due_ts(current_timestamp()) 를 호출하면 다음 마감일이 됩니다.

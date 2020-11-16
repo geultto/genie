@@ -19,15 +19,15 @@ WITH m AS (
          WHEN parent_user_id IS NULL AND ts < due_ts AND reaction.name = 'pass' THEN 'pass'
          WHEN parent_user_id IS NOT NULL AND ts < due_ts AND reaction.name = 'feedback' THEN 'feedback'
     END reaction,
-    CASE WHEN reaction.name = 'submit' THEN CONCAT("https://geultto4.slack.com/archives/", channel_id, "/p", UNIX_MICROS(ts), "/")
-         WHEN reaction.name = 'feedback' THEN CONCAT("https://geultto4.slack.com/archives/", channel_id, "/p", UNIX_MICROS(thread_ts), "/")
+    CASE WHEN reaction.name = 'submit' THEN CONCAT("https://geultto5.slack.com/archives/", channel_id, "/p", UNIX_MICROS(ts), "/")
+         WHEN reaction.name = 'feedback' THEN CONCAT("https://geultto5.slack.com/archives/", channel_id, "/p", UNIX_MICROS(thread_ts), "/")
     END m_url,
     REGEXP_EXTRACT_ALL(REGEXP_REPLACE(IF(reaction.name = 'submit', text, null), "\\|.+>", ">"), "<.+>") post_url
-  FROM `geultto_5th_staging.message` , UNNEST(reactions) reaction
+  FROM `geultto_5th_prod.message` , UNNEST(reactions) reaction
   WHERE reaction.name IN ('pass', 'feedback', 'submit') AND ts < insert_ts
 )
 
 SELECT u.channel_id, u.user_id, u.channel_name, u.user_name, round, m.ts, m.reaction, m.parent_user_id, m.m_url, m.post_url, m.text
-FROM `geultto_5th_staging.user` u, UNNEST([1,2,3,4,5,6,7,8,9,10,11,12,13]) round
+FROM `geultto_5th_prod.user` u, UNNEST([1,2,3,4,5,6,7,8,9,10,11,12,13]) round
 LEFT JOIN m ON u.user_id = m.user_id AND u.channel_id = m.channel_id AND round = m.round
 ;

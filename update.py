@@ -75,7 +75,7 @@ def insert_message_raw():
     messages = reduce(lambda l1, l2: l1 + l2, [list_channel_messages(channel_id) for channel_id in CHANNEL_IDS])
     df = pd.DataFrame(messages)
     df['time_ms'] = int(datetime.datetime.now().timestamp() * 1000000)  # 언제 insert 했는지 epoch microseconds 로 적어줍니다.
-    df.to_gbq(destination_table=f'geultto_5th_staging.message_raw', project_id='geultto', if_exists='append')
+    df.to_gbq(destination_table=f'geultto_5th_prod.message_raw', project_id='geultto', if_exists='append')
 
 
 def update_table(sql, destination):
@@ -170,7 +170,7 @@ def insert_review_mapping():
         assignments = assign_reviewees(teams)
         # TODO timezone explicit 하게 명시.
         suffix = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        table_review_mapping_raw = f'geultto_5th_staging.review_mapping_raw_{suffix}'
+        table_review_mapping_raw = f'geultto_5th_prod.review_mapping_raw_{suffix}'
         df = pd.DataFrame(assignments)
         df['time_ms'] = int(datetime.datetime.now().timestamp() * 1000000)  # epoch microseconds.
         df.to_gbq(table_review_mapping_raw)
@@ -189,9 +189,10 @@ def assert_sql(file_path):
 
 
 def assert_review_mapping():
-    assert_sql('sql/assert_review_mapping_count_by_due.sql')
-    # assert_sql('sql/assert_reviewee_ids_predicates.sql')
+    # assert_sql('sql/assert_review_mapping_count_by_due.sql')
+    assert_sql('sql/assert_reviewee_ids_predicates.sql')
     assert_sql('sql/assert_reviewers_are_equally_mapped.sql')
+
 
 def update_submit_table(destination):
     sql = read_sql('sql/create_submit_tbl.sql')
@@ -199,23 +200,23 @@ def update_submit_table(destination):
     job = BIGQUERY_CLIENT.query(sql, job_config=job_config)
     job.result()
 
+
 if __name__ == '__main__':
     # slack api 로 데이터 받아와서 message_raw 에 insert.
     insert_message_raw()
 
     # message_raw 에서 적절히 중복 제거하여 message 로 overwrite.
-    update_table(read_sql('sql/message_raw_to_message.sql'), 'geultto.geultto_5th_staging.message')
+    update_table(read_sql('sql/message_raw_to_message.sql'), 'geultto.geultto_5th_prod.message')
 
     # 필요하다면 reviewee 지정해서 review_mapping 에 insert.
     insert_review_mapping()
 
     # review_mapping 테이블의 데이터가 만족해야 할 것들을 확인합니다.
-    # assert_review_mapping()
+    assert_review_mapping()
 
     # submit, pass, feedback 테이블 overwrite.
-    # TODO submit_submit -> submit?
     # geultto_5th_prod
-    update_table(read_sql('sql/submit.sql'), 'geultto.geultto_5th_staging.submit_submit')
-    update_table(read_sql('sql/pass.sql'), 'geultto.geultto_5th_staging.pass')
-    update_table(read_sql('sql/feedback.sql'), 'geultto.geultto_5th_staging.feedback')
-    update_table(read_sql('sql/result.sql'), 'geultto.geultto_5th_staging.result')
+    update_table(read_sql('sql/submit.sql'), 'geultto.geultto_5th_prod.submit')
+    update_table(read_sql('sql/pass.sql'), 'geultto.geultto_5th_prod.pass')
+    update_table(read_sql('sql/feedback.sql'), 'geultto.geultto_5th_prod.feedback')
+    update_table(read_sql('sql/result.sql'), 'geultto.geultto_5th_prod.result')

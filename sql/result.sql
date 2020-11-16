@@ -14,7 +14,7 @@ from (
         else 'PASS 사용 X'
       end as pass,
       case
-        when submit_submit.is_valid then '글 제출 O'
+        when submit.is_valid then '글 제출 O'
         else '글 제출 X'
       end as submit,
       feedbacks[safe_offset(0)].reviewee_name as reviewee_name1,
@@ -31,21 +31,21 @@ from (
         when feedbacks[safe_offset(1)].ts_min >= due_ts then '피드백 늦음'
         when feedbacks[safe_offset(1)].ts_min is null then '피드백 X'
       end as feedback2,
-      if(pass.is_valid or submit_submit.is_valid, 0, -5000) as deposit_deduction_post,
+      if(pass.is_valid or submit.is_valid, 0, -5000) as deposit_deduction_post,
       if(pass.is_valid or feedbacks[safe_offset(0)].reviewee_id is null or feedbacks[safe_offset(0)].ts_min < due_ts, 0, -2500) as deposit_deduction_feedback1,
       if(pass.is_valid or feedbacks[safe_offset(1)].reviewee_id is null or feedbacks[safe_offset(1)].ts_min < due_ts, 0, -2500) as deposit_deduction_feedback2,
     from (
       select
         distinct(due_ts) as due_ts
       from
-        geultto_5th_staging.message
+        geultto_5th_prod.message
       where
         due_ts < current_timestamp()
     ) due
-      cross join geultto_5th_staging.user
-      left join geultto_5th_staging.pass using (due_ts, user_id)
-      left join geultto_5th_staging.submit_submit using (due_ts, user_id)
-      left join geultto_5th_staging.feedback using (due_ts, user_id)
+      cross join geultto_5th_prod.user
+      left join geultto_5th_prod.pass using (due_ts, user_id)
+      left join geultto_5th_prod.submit using (due_ts, user_id)
+      left join geultto_5th_prod.feedback using (due_ts, user_id)
   )
 )
 order by

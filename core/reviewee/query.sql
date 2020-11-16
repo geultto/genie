@@ -4,7 +4,7 @@ from (
   select
     channel_id, array_agg(distinct user_id order by user_id) as user_ids
   from
-    geultto_4th_staging.user
+    geultto_4th_prod.user
   group by
     channel_id
 ) reviewers left join (
