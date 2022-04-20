@@ -10,7 +10,7 @@ select
   insert_ts,
   due_ts
 from
-  geultto_5th_prod.message_raw
+  geultto_6th_prod.message_raw
   join (
     select
       channel_id, ts, insert_ts, due_ts
@@ -30,7 +30,7 @@ from
             -- 이때 message_raw 에 처음 insert 될때 feedback emoji 가 없었다가 이후 달리는 케이스를 커버하기 위해 thread_ts is not null 의 널널한 조건을 사용합니다.
             -- submit, feedback emoji 를 실수로 함께 매단 케이스가 1건 존재하여 case when 절에서 우선 submit or pass 여부로 분기합니다.
             case
-              when user_id = 'UT3DE17S7' and ts = '2020-02-19 12:51:14.020 UTC' then '2020-03-15 15:00:00 UTC' -- 훈련소 입소로 2주차 글 미리 제출한 것 따로 처리.
+--               when user_id = 'UT3DE17S7' and ts = '2020-02-19 12:51:14.020 UTC' then '2020-03-15 15:00:00 UTC' -- 훈련소 입소로 2주차 글 미리 제출한 것 따로 처리.
               when (select countif(r.name in ('submit', 'pass')) from unnest(reactions) as r) > 0 then geultto_udf.find_due_ts(ts)
               when thread_ts is not null then timestamp_add(geultto_udf.find_due_ts(thread_ts), interval 14 day)
               else geultto_udf.find_due_ts(ts)
@@ -43,7 +43,7 @@ from
               timestamp_micros(time_ms) as insert_ts,
               array(select r from unnest(geultto_udf.parse_reactions(replace(reactions, '\'', '\"'))) as r where r.name in ('submit', 'feedback', 'pass')) as reactions
             from
-              geultto_5th_prod.message_raw
+              geultto_6th_prod.message_raw
           )
         )
       )

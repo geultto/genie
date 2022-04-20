@@ -9,9 +9,9 @@ from (
     select
       due_ts, channel_id, reviewee_id, count(1) as cnt
     from
-      geultto_5th_prod.review_mapping rm
+      geultto_6th_prod.review_mapping rm
       cross join unnest(reviewee_ids) as reviewee_id
-      join geultto_5th_prod.user u using (user_id)
+      join geultto_6th_prod.user u using (user_id)
     group by
       due_ts, channel_id, reviewee_id
   )

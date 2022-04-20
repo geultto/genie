@@ -9,7 +9,7 @@ from (
       else count(1) = 98 and count(user_id) = 98 and count(distinct(user_id)) = 98
     end as b
   from
-    geultto_5th_prod.review_mapping
+    geultto_6th_prod.review_mapping
   group by
     due_ts
 )

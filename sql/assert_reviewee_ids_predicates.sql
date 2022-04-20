@@ -8,7 +8,7 @@ select
     and user_id not in unnest(reviewee_ids)
   ) as b
 from
-  geultto_5th_prod.review_mapping
-where
-  -- UT3DE17S7 님은 훈련소 입소로 1회차 때 reviewee_ids 가 지정되지 않았습니다.
-  not (user_id = 'UT3DE17S7' and due_ts = '2020-03-15 15:00:00 UTC' and insert_ts = '2020-03-01 16:00:00 UTC')
+  geultto_6th_prod.review_mapping
+where 1=1
+--   -- UT3DE17S7 님은 훈련소 입소로 1회차 때 reviewee_ids 가 지정되지 않았습니다.
+--   not (user_id = 'UT3DE17S7' and due_ts = '2020-03-15 15:00:00 UTC' and insert_ts = '2020-03-01 16:00:00 UTC')

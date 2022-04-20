@@ -11,22 +11,35 @@ from google.cloud.bigquery import QueryJobConfig
 from google.cloud.bigquery.job import WriteDisposition
 from slack_sdk import WebClient
 
+slack_token = "xxx"
 
-client = WebClient(token=os.environ['GEULTTO_SLACK_TOKEN'])
+client = WebClient(token=slack_token)
+# client = WebClient(token=os.environ['GEULTTO_SLACK_TOKEN'])
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'config/geultto-genie-46d7f46b7ca2.json'
 BIGQUERY_CLIENT = bigquery.Client()
 
 
-# 5기
-# C01DMFUDE30 3_ai엔지니어_머신러닝엔지니어
-# C01DR5EQ0GM 3_데이터엔지니어
-# C01EJ3EH51N 3_백엔드_개발
-# C01EJ3D8W8G 3_비즈니스분석가_데이터분석가
-# C01DU81LTD0 3_클라이언트_개발
-# C01DU82BP18 3_프론트엔드_개발
+# 6기
+# C02714U0S11 자기소개
+# C028EANJBR9 3_데이터-분석가a
+# C028B41AKTP 3_데이터-분석가b
+# C028SPZHA2D 3_데이터-사이언티스트
+# C028E4PJC66 3_데이터-엔지니어
+# C028B41UP5K 3_딥러닝-리서치-사이언티스트a
+# C027ZCVC0EB 3_딥러닝-리서치-사이언티스트b
+# C027ZCVMQ5D 3_백엔드-개발a
+# C0293R0P2GG 3_백엔드-개발b
+# C028EAQ2KGT 3_백엔드-개발c
+# C0287J5B1SS 3_백엔드-개발d
+# C027ZCW4D71 3_인프라-devops
+# C028B42NF45 3_클라이언트-개발
+# C028LAQMNP6 3_프론트엔드-개발a
+# C028SQ11V0R 3_프론트엔드-개발b
+# C028SQ1509X 3_프론트엔드-개발c
 
-CHANNEL_IDS = ['C01DMFUDE30', 'C01DR5EQ0GM', 'C01EJ3EH51N', 'C01EJ3D8W8G', 'C01DU81LTD0', 'C01DU82BP18']
-
+CHANNEL_IDS = ['C028EANJBR9', 'C028B41AKTP', 'C028SPZHA2D', 'C028E4PJC66', 'C028B41UP5K','C027ZCVC0EB',
+               'C027ZCVMQ5D', 'C0293R0P2GG', 'C028EAQ2KGT', 'C0287J5B1SS', 'C027ZCW4D71', 'C028B42NF45', 'C028LAQMNP6',
+               'C028SQ11V0R', 'C028SQ1509X']
 
 
 def read_sql(file_path):
@@ -52,15 +65,18 @@ def list_channel_messages(channel_id):
     print(f'list_channel_messages started for {channel_id}')
     channel_messages = []
 
-    body = client.conversations_history(channel=channel_id, limit=300).data
-    assert body['ok'] and not body['has_more'], f'ok: {body["ok"]}, has_more: {body["has_more"]}'
+    body = client.conversations_history(channel=channel_id, limit=3000).data
+    # TODO : 여기 1000개 가져오는거 나중에 문제될듯.. 점점 많은 데이터를 가져오게 한다
+    print(body)
+    # assert body['ok'] and not body['has_more'], f'ok: {body["ok"]}, has_more: {body["has_more"]}'
 
     for message in body['messages']:
         # subtype 이 channel_topic, channel_join 인 메시지는 무시하고 None 인 경우 = 보통의 메시지만 취합니다.
         if message.get('type') == 'message' and not message.get('subtype'):
             if message.get('reply_count', 0) > 0:
-                threads = client.conversations_replies(channel=channel_id, ts=message['thread_ts']).data
-                assert threads['ok'] and not threads['has_more'], f'{threads["ok"]}, {threads["has_more"]}'
+                threads = client.conversations_replies(channel=channel_id, ts=message['thread_ts'], limit=1000).data
+                # print(threads)
+                # assert threads['ok'] and not threads['has_more'], f'{threads["ok"]}, {threads["has_more"]}'
                 for thread in threads['messages']:
                     # threads 에는 thread 뿐 아니라 thread 가 달린 본래 message 까지 있으므로 걸러줍니다.
                     if not message['ts'] == thread['ts']:
@@ -72,10 +88,20 @@ def list_channel_messages(channel_id):
 
 
 def insert_message_raw():
-    messages = reduce(lambda l1, l2: l1 + l2, [list_channel_messages(channel_id) for channel_id in CHANNEL_IDS])
-    df = pd.DataFrame(messages)
-    df['time_ms'] = int(datetime.datetime.now().timestamp() * 1000000)  # 언제 insert 했는지 epoch microseconds 로 적어줍니다.
-    df.to_gbq(destination_table=f'geultto_5th_prod.message_raw', project_id='geultto', if_exists='append')
+    # 만약 오류가 생겨서 하나에서만 진행한다면 아래와 같이 진행
+    # CHANNEL_IDS = ['C01DMFUDE30']
+    # CHANNEL_IDS = ['C01DR5EQ0GM']
+    # CHANNEL_IDS = ['C01EJ3EH51N']
+    # CHANNEL_IDS = ['C01EJ3D8W8G']
+    # CHANNEL_IDS = ['C01DU81LTD0']
+    # CHANNEL_IDS = ['C01DU82BP18']
+    for channel_id in CHANNEL_IDS:
+        print("channel_id", channel_id)
+        messages = reduce(lambda l1, l2: l1 + l2, [list_channel_messages(channel_id)])
+        # messages = reduce(lambda l1, l2: l1 + l2, [list_channel_messages(channel_id) for channel_id in CHANNEL_IDS])
+        df = pd.DataFrame(messages)
+        df['time_ms'] = int(datetime.datetime.now().timestamp() * 1000000)  # 언제 insert 했는지 epoch microseconds 로 적어줍니다.
+        df.to_gbq(destination_table=f'geultto_6th_prod.message_raw', project_id='geultto', if_exists='append')
 
 
 def update_table(sql, destination):
@@ -170,7 +196,7 @@ def insert_review_mapping():
         assignments = assign_reviewees(teams)
         # TODO timezone explicit 하게 명시.
         suffix = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        table_review_mapping_raw = f'geultto_5th_prod.review_mapping_raw_{suffix}'
+        table_review_mapping_raw = f'geultto_6th_prod.review_mapping_raw_{suffix}'
         df = pd.DataFrame(assignments)
         df['time_ms'] = int(datetime.datetime.now().timestamp() * 1000000)  # epoch microseconds.
         df.to_gbq(table_review_mapping_raw)
@@ -189,8 +215,9 @@ def assert_sql(file_path):
 
 
 def assert_review_mapping():
+    # 아래 두개는 사실상 쓰지 않음
     # assert_sql('sql/assert_review_mapping_count_by_due.sql')
-    assert_sql('sql/assert_reviewee_ids_predicates.sql')
+    # assert_sql('sql/assert_reviewee_ids_predicates.sql')
     assert_sql('sql/assert_reviewers_are_equally_mapped.sql')
 
 
@@ -202,21 +229,21 @@ def update_submit_table(destination):
 
 
 if __name__ == '__main__':
-    # slack api 로 데이터 받아와서 message_raw 에 insert.
+    # # slack api 로 데이터 받아와서 message_raw 에 insert.
     insert_message_raw()
-
-    # message_raw 에서 적절히 중복 제거하여 message 로 overwrite.
-    update_table(read_sql('sql/message_raw_to_message.sql'), 'geultto.geultto_5th_prod.message')
-
-    # 필요하다면 reviewee 지정해서 review_mapping 에 insert.
+    # #
+    # # # message_raw 에서 적절히 중복 제거하여 message 로 overwrite.
+    update_table(read_sql('sql/message_raw_to_message.sql'), 'geultto.geultto_6th_prod.message')
+    #
+    # # 필요하다면 reviewee 지정해서 review_mapping 에 insert.
     insert_review_mapping()
 
     # review_mapping 테이블의 데이터가 만족해야 할 것들을 확인합니다.
     assert_review_mapping()
 
     # submit, pass, feedback 테이블 overwrite.
-    # geultto_5th_prod
-    update_table(read_sql('sql/submit.sql'), 'geultto.geultto_5th_prod.submit')
-    update_table(read_sql('sql/pass.sql'), 'geultto.geultto_5th_prod.pass')
-    update_table(read_sql('sql/feedback.sql'), 'geultto.geultto_5th_prod.feedback')
-    update_table(read_sql('sql/result.sql'), 'geultto.geultto_5th_prod.result')
+    # geultto_6th_prod
+    update_table(read_sql('sql/submit.sql'), 'geultto.geultto_6th_prod.submit')
+    update_table(read_sql('sql/pass.sql'), 'geultto.geultto_6th_prod.pass')
+    update_table(read_sql('sql/feedback.sql'), 'geultto.geultto_6th_prod.feedback')
+    update_table(read_sql('sql/result.sql'), 'geultto.geultto_6th_prod.result')

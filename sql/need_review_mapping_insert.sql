@@ -6,12 +6,12 @@ from (
   select
     count(1) = 0 as review_mapping_not_exists
   from
-    geultto_5th_prod.review_mapping
+    geultto_6th_prod.review_mapping
   where
     due_ts = geultto_udf.find_due_ts(current_timestamp())
 ) cross join (
   select
     max(insert_ts) > timestamp_sub(geultto_udf.find_due_ts(current_timestamp()), interval 14 day) as message_exists
   from
-    geultto_5th_prod.message
+    geultto_6th_prod.message
 )

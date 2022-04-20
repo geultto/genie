@@ -31,21 +31,36 @@ from (
         when feedbacks[safe_offset(1)].ts_min >= due_ts then '피드백 늦음'
         when feedbacks[safe_offset(1)].ts_min is null then '피드백 X'
       end as feedback2,
-      if(pass.is_valid or submit.is_valid, 0, -5000) as deposit_deduction_post,
-      if(pass.is_valid or feedbacks[safe_offset(0)].reviewee_id is null or feedbacks[safe_offset(0)].ts_min < due_ts, 0, -2500) as deposit_deduction_feedback1,
-      if(pass.is_valid or feedbacks[safe_offset(1)].reviewee_id is null or feedbacks[safe_offset(1)].ts_min < due_ts, 0, -2500) as deposit_deduction_feedback2,
+      case
+        when date_sub(date(due_ts, 'Asia/Seoul'), interval 1 day) < "2021-11-21" then if(pass.is_valid or submit.is_valid, 0, -10000)
+        else if(pass.is_valid or submit.is_valid, 0, -5000)
+      end as deposit_deduction_post,
+      case
+        when date_sub(date(due_ts, 'Asia/Seoul'), interval 1 day) < "2021-11-21" then if(pass.is_valid or feedbacks[safe_offset(0)].reviewee_id is null or feedbacks[safe_offset(0)].ts_min < due_ts, 0, 0)
+        else if(pass.is_valid or feedbacks[safe_offset(0)].reviewee_id is null or feedbacks[safe_offset(0)].ts_min < due_ts, 0, -2500)
+      end as deposit_deduction_feedback1,
+      case
+        when date_sub(date(due_ts, 'Asia/Seoul'), interval 1 day) < "2021-11-21" then if(pass.is_valid or feedbacks[safe_offset(1)].reviewee_id is null or feedbacks[safe_offset(1)].ts_min < due_ts, 0, 0)
+        else if(pass.is_valid or feedbacks[safe_offset(1)].reviewee_id is null or feedbacks[safe_offset(1)].ts_min < due_ts, 0, -2500)
+      end as deposit_deduction_feedback2,
+--       if(pass.is_valid or submit.is_valid, 0, -10000) as deposit_deduction_post,
+--       if(pass.is_valid or feedbacks[safe_offset(0)].reviewee_id is null or feedbacks[safe_offset(0)].ts_min < due_ts, 0, 0) as deposit_deduction_feedback1,
+--       if(pass.is_valid or feedbacks[safe_offset(1)].reviewee_id is null or feedbacks[safe_offset(1)].ts_min < due_ts, 0, 0) as deposit_deduction_feedback2,
+--       if(pass.is_valid or submit.is_valid, 0, -5000) as deposit_deduction_post,
+--       if(pass.is_valid or feedbacks[safe_offset(0)].reviewee_id is null or feedbacks[safe_offset(0)].ts_min < due_ts, 0, -2500) as deposit_deduction_feedback1,
+--       if(pass.is_valid or feedbacks[safe_offset(1)].reviewee_id is null or feedbacks[safe_offset(1)].ts_min < due_ts, 0, -2500) as deposit_deduction_feedback2,
     from (
       select
         distinct(due_ts) as due_ts
       from
-        geultto_5th_prod.message
+        geultto_6th_prod.message
       where
         due_ts < current_timestamp()
     ) due
-      cross join geultto_5th_prod.user
-      left join geultto_5th_prod.pass using (due_ts, user_id)
-      left join geultto_5th_prod.submit using (due_ts, user_id)
-      left join geultto_5th_prod.feedback using (due_ts, user_id)
+      cross join geultto_6th_prod.user
+      left join geultto_6th_prod.pass using (due_ts, user_id)
+      left join geultto_6th_prod.submit using (due_ts, user_id)
+      left join geultto_6th_prod.feedback using (due_ts, user_id)
   )
 )
 order by
